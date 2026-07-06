@@ -7,7 +7,7 @@ from game.uno import Uno
 
 
 async def main():
-    game = Uno() # initialiser le jeu
+    game = Uno()  # initialiser le jeu
 
     bot = IRCClient(
         config.SERVER,
@@ -18,11 +18,14 @@ async def main():
         game
     )
 
-    await bot.connect()
+    try:
+        await bot.connect()
+        await bot.loop()
 
-    await bot.loop()
+    except KeyboardInterrupt:
+        print("Arrêt du bot...")
 
-    
-
+        bot.running = False
+        await bot.stop()
 
 asyncio.run(main())

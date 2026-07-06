@@ -5,10 +5,13 @@ class Uno:
 
     def add_player(self, pseudo):
         if self.started: # Partie déjà en cours
-            return False
+            return (False, "ALREADY_STARTED")
         
         if pseudo in self.players: # Joueur déjà enregistré
-            return False
+            return (False, "ALREADY_IN")
         
         self.players.append(pseudo)
-        return True
+        return (True, "OK")
+    
+    def see_players(self):
+        return self.players

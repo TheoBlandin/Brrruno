@@ -1,10 +1,13 @@
 import asyncio
-from commands.join import handleJoin
+
 import config
+
 from irc.parser import parse_privmsg
 
-class IRCClient:
+from commands.join import joinGame
+from commands.players import seePlayers
 
+class IRCClient:
     def __init__(self, server, port, nick, username, realname, game):
         self.server = server
         self.port = port
@@ -26,6 +29,17 @@ class IRCClient:
         await self.send(f"NICK {self.nick}")
         await self.send(f"USER {self.username} 0 * :{self.realname}")
 
+    async def stop(self):
+        try:
+            await self.send("QUIT :Bot shutdown")
+
+            if self.writer:
+                self.writer.close()
+                await self.writer.wait_closed()
+
+        except Exception as e:
+            print("Erreur arrêt bot:", e)
+
     async def send(self, message):
         print(">> [W]", message)
         self.writer.write((message + "\r\n").encode())
@@ -34,14 +48,19 @@ class IRCClient:
     async def recv(self):
         line = await self.reader.readline()
         return line.decode(errors="ignore").strip()
-    
+
+    # Commandes
     async def handle_join(self, user, channel):
-        await handleJoin(self.game, self, user, channel)
+        await joinGame(self.game, self, user, channel)
+
+    async def handle_players(self, channel):
+        await seePlayers(self.game, self, channel)
 
     async def loop(self):
         registered = False
+        self.running = True
 
-        while True:
+        while self.running:
             message = await self.recv()
             print("<< [R]", message)
 
@@ -63,5 +82,9 @@ class IRCClient:
             if parsed:
                 user, channel, msg = parsed
 
-                if msg == "!join": # Rejoindre la partie
-                    await self.handle_join(user, channel)
+               
+                match msg:
+                    case "!join": # Rejoindre la partie
+                        await self.handle_join(user, channel)
+                    case "!players": # Voir la liste des joueurs
+                        await self.handle_players(channel)
