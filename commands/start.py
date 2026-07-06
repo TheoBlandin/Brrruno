@@ -3,6 +3,18 @@ async def startGame(game, bot, channel):
 
     if success:
         await bot.send(f"PRIVMSG {channel} :La partie va commencer !")
+
+        for p in game.players:
+            hand_string = ''
+
+            for i in range(7):
+                if i + 1 == 7:  # Dernière carte de la main
+                    hand_string += p.hand[i]
+                else:
+                    hand_string += p.hand[i] + ', '
+
+            await bot.send(f"NOTICE {p.pseudo} :Voici ta main : {hand_string}")
+
     else:
         match message:
             case "ALREADY_STARTED":

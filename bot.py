@@ -3,7 +3,7 @@ import asyncio
 import config
 from irc.client import IRCClient
 
-from game.uno import Uno
+from uno.game import Uno
 
 
 async def main():

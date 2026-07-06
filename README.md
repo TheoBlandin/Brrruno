@@ -7,3 +7,5 @@ Bot IRC pour jouer au Uno
 **!quit** : Quitter la partie
 
 **!players** : Liste des joueurs
+
+**!start**: Lancer la partie
