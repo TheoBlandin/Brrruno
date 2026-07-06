@@ -5,7 +5,9 @@ import config
 from irc.parser import parse_privmsg
 
 from commands.join import joinGame
+from commands.quit import quitGame
 from commands.players import seePlayers
+from commands.start import startGame
 
 class IRCClient:
     def __init__(self, server, port, nick, username, realname, game):
@@ -47,14 +49,25 @@ class IRCClient:
 
     async def recv(self):
         line = await self.reader.readline()
+
+        if not line:
+            self.running = False
+            return ""
+
         return line.decode(errors="ignore").strip()
 
     # Commandes
     async def handle_join(self, user, channel):
         await joinGame(self.game, self, user, channel)
 
+    async def handle_quit(self, user, channel):
+        await quitGame(self.game, self, user, channel)
+
     async def handle_players(self, channel):
         await seePlayers(self.game, self, channel)
+
+    async def handle_start(self, channel):
+        await startGame(self.game, self, channel)
 
     async def loop(self):
         registered = False
@@ -76,15 +89,19 @@ class IRCClient:
 
                 for channel in config.CHANNELS:
                     await self.send(f"JOIN {channel}")
+                    await self.send(f"PRIVMSG {channel} :Prêts pour une partie de Uno ? Taper !join pour rejoindre la partie")
 
             # Gestion des commandes
             parsed = parse_privmsg(message)
             if parsed:
                 user, channel, msg = parsed
 
-               
-                match msg:
+                match msg.lower():
                     case "!join": # Rejoindre la partie
                         await self.handle_join(user, channel)
+                    case "!quit": # Quitter la partie
+                        await self.handle_quit(user, channel)
                     case "!players": # Voir la liste des joueurs
                         await self.handle_players(channel)
+                    case "!start": # Lancer la partie
+                        await self.handle_start(channel)
