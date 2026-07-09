@@ -14,6 +14,8 @@ async def startGame(game, bot, channel):
                     hand_string += p.hand[i] + ', '
 
             await bot.send(f"NOTICE {p.pseudo} :Voici ta main : {hand_string}")
+        
+        await bot.send(f"PRIVMSG {channel} :La première carte est : {game.current_card}. C'est à {game.players[game.current_player].pseudo} de jouer.")
 
     else:
         match message:

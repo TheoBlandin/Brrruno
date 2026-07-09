@@ -1,12 +1,12 @@
 import random
-
+from collections import deque
 
 class Deck:
     def __init__(self):
         self.cards = []
 
     def build(self):
-        colors = ["rouge", "vert", "bleu", "jaune"]
+        colors = ["🟥 rouge", "🟩 vert", "🟦 bleu", "🟨 jaune"]
 
         for c in colors:
             # Carte numérotées
@@ -20,10 +20,16 @@ class Deck:
             self.cards += [f"{c}_passeTonTour", f"{c}_changeDeSens", f"{c}_+2"] * 2
 
         # Cartes jokers
-        self.cards += [f"joker", f"joker_+4"] * 4
+        self.cards += [f"⬛ joker", f"⬛ joker_+4"] * 4
+
+        self.cards = deque(self.cards)
 
         # Mélanger le paquet
         random.shuffle(self.cards)
 
     def draw(self):
         return self.cards.pop() # Enlever la dernière carte du paquet
+    
+    def add(self, card):
+        return self.cards.appendleft(card)
+    
