@@ -8,6 +8,8 @@ from commands.join import joinGame
 from commands.quit import quitGame
 from commands.players import seePlayers
 from commands.start import startGame
+from commands.play import play
+from commands.draw import draw
 
 class IRCClient:
     def __init__(self, server, port, nick, username, realname, game):
@@ -69,6 +71,12 @@ class IRCClient:
     async def handle_start(self, channel):
         await startGame(self.game, self, channel)
 
+    async def handle_play(self, user, channel, msg):
+        await play(self.game, self, user, channel, msg)
+
+    async def handle_draw(self, user, channel):
+        await draw(self.game, self, user, channel)
+
     async def loop(self):
         registered = False
         self.running = True
@@ -105,3 +113,7 @@ class IRCClient:
                         await self.handle_players(channel)
                     case "!start": # Lancer la partie
                         await self.handle_start(channel)
+                    case c if c.startswith("!play") : # Jouer une carte
+                        await self.handle_play(user, channel, msg)
+                    case "!draw": # Piocher une carte
+                        await self.handle_draw(user, channel)

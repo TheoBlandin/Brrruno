@@ -6,7 +6,7 @@ class Deck:
         self.cards = []
 
     def build(self):
-        colors = ["🟥 rouge", "🟩 vert", "🟦 bleu", "🟨 jaune"]
+        colors = ["rouge", "vert", "bleu", "jaune"]
 
         for c in colors:
             # Carte numérotées
@@ -20,7 +20,7 @@ class Deck:
             self.cards += [f"{c}_passeTonTour", f"{c}_changeDeSens", f"{c}_+2"] * 2
 
         # Cartes jokers
-        self.cards += [f"⬛ joker", f"⬛ joker_+4"] * 4
+        self.cards += [f"joker", f"joker_+4"] * 4
 
         self.cards = deque(self.cards)
 
