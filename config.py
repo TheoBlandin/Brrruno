@@ -12,6 +12,4 @@ NICK = "Brrruno"
 USERNAME = "Brrruno"
 REALNAME = "bot-uno"
 
-CHANNELS = [
-    "#Amie"
-]
+CHANNELS = os.getenv("CHANNELS")
