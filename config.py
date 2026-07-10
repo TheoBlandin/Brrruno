@@ -8,8 +8,8 @@ load_dotenv()
 SERVER = os.getenv("SERVER")
 PORT = 6667
 
-NICK = "Brrruno"
-USERNAME = "Brrruno"
+NICK = "BrrrUno"
+USERNAME = "BrrrUno"
 REALNAME = "bot-uno"
 
 CHANNELS = os.getenv("CHANNELS", "").split(",")

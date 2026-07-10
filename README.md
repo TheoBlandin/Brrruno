@@ -1,4 +1,4 @@
-# Brrruno
+# BrrrUno
 Bot IRC pour jouer au Uno
 
 ## Configuration
@@ -15,8 +15,10 @@ CHANNELS = "#channel_1","#channel_2" # Noms des channels à rejoindre, sans espa
 
 **!players** : Liste des joueurs
 
-**!start**: Lancer la partie
+**!start** : Lancer la partie
 
-**!play <card>**: Jouer une carte
+**!play <card>** : Jouer une carte
 
-**!draw**: Piocher une carte
+**!draw** : Piocher une carte
+
+**!rouge** ou **!vert** ou **!bleu** ou **!jaune** : Choisir une couleur suite à une carte Joker

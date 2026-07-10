@@ -20,7 +20,7 @@ class Deck:
             self.cards += [f"{c}_passeTonTour", f"{c}_changeDeSens", f"{c}_+2"] * 2
 
         # Cartes jokers
-        self.cards += [f"joker", f"joker_+4"] * 4
+        self.cards += [f"joker_couleurs", f"joker_+4"] * 4
 
         self.cards = deque(self.cards)
 

@@ -1,13 +1,16 @@
 from utils.colors import COLORS
 
-async def play(game, bot, pseudo, channel, msg):
-    success, message = await game.play(bot, pseudo, channel, msg)
+
+async def chooseColor(game, bot, pseudo, channel, msg):
+    success, message = game.choose_color(pseudo, msg)
 
     if success:
-        current_card = COLORS[game.current_card.split('_')[0]] + ' ' + game.current_card
+        color = game.current_card.split('_')[0]
+        color = COLORS[color] + ' ' + color
+
         player = game.players[game.current_player]
 
-        await bot.send(f"PRIVMSG {channel} :La nouvelle carte est {current_card}. C'est à {player.pseudo} de jouer.")
+        await bot.send(f"PRIVMSG {channel} :La nouvelle couleur est {color}. C'est à {player.pseudo} de jouer.")
 
         nb_card = len(player.hand)
         hand_string = ''
@@ -26,9 +29,5 @@ async def play(game, bot, pseudo, channel, msg):
                 await bot.send(f"PRIVMSG {channel} :La partie n'a pas encore commencé.")
             case "NOT_YOUR_TURN":
                 await bot.send(f"PRIVMSG {channel} :Ce n'est pas à ton tour de jouer.")
-            case "NO_CARD":
-                await bot.send(f"PRIVMSG {channel} :Tu n'as choisit aucune carte.")
-            case "NOT_IN_HAND":
-                await bot.send(f"PRIVMSG {channel} :Cette carte n'est pas dans ta main.")
-            case "INVALID":
-                await bot.send(f"PRIVMSG {channel} :Ce coup est invalide.")
+            case "NOT_ASKED":
+                await bot.send(f"PRIVMSG {channel} :Ce n'est pas le moment de choisir une couleur.")

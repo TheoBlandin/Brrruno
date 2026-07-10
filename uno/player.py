@@ -8,6 +8,3 @@ class Player:
 
     def play_card(self, card):
         self.hand.remove(card)
-
-    def see_hand(self):
-        return self.hand
