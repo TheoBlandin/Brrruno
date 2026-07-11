@@ -2,6 +2,16 @@ from utils.colors import COLORS
 
 
 async def chooseColor(game, bot, pseudo, channel, msg):
+    """ Traiter la réponse du bot à l'action Choisir une couleur
+
+    Parameters:
+        game (Uno): Partie de Uno à lancer
+        bot (IRCClient): Bot de jeu connecté à l'IRC
+        pseudo (str): Pseudo du joueur ayant effectué l'action
+        channel (str): Salon dans lequel le joueur a effectué l'action
+        msg (string): Message du joueur composant son action
+    """
+
     success, message = game.choose_color(pseudo, msg)
 
     if success:
@@ -13,14 +23,13 @@ async def chooseColor(game, bot, pseudo, channel, msg):
         await bot.send(f"PRIVMSG {channel} :La nouvelle couleur est {color}. C'est à {player.pseudo} de jouer.")
 
         nb_card = len(player.hand)
-        hand_string = ''
+        cards = []
         for i in range(nb_card):
             card = player.hand[i]
-            card = COLORS[card.split('_')[0]] + ' ' + card # Ajouter le carré de couleur correspondant
-            if i + 1 == nb_card:  # Dernière carte de la main
-                hand_string += card
-            else:
-                hand_string += card + ', '
+            # Ajouter le carré de couleur correspondant
+            card = COLORS[card.split('_')[0]] + ' ' + card
+            cards.append(card)
+        hand_string = ", ".join(cards)
 
         await bot.send(f"NOTICE {player.pseudo} :Voici ta main : {hand_string}")
     else:

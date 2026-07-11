@@ -1,22 +1,31 @@
 from utils.colors import COLORS
 
+
 async def draw(game, bot, pseudo, channel):
+    """ Traiter la réponse du bot à l'action Piocher une carte
+
+    Parameters:
+        game (Uno): Partie de Uno à lancer
+        bot (IRCClient): Bot de jeu connecté à l'IRC
+        pseudo (str): Pseudo du joueur ayant effectué l'action
+        channel (str): Salon dans lequel le joueur a effectué l'action
+    """
+
     success, message = game.draw_card(pseudo)
 
     if success:
         player = game.players[game.current_player]
         nb_card = len(player.hand)
 
-        hand_string = ''
+        cards = []
         drawed_card = ''
         for i in range(nb_card):
             card = player.hand[i]
-            card = COLORS[card.split('_')[0]] + ' ' + card # Ajouter le carré de couleur correspondant
-            if i + 1 == nb_card:  # Dernière carte de la main
-                hand_string += card
-                drawed_card = card
-            else:
-                hand_string += card + ', '
+            # Ajouter le carré de couleur correspondant
+            card = COLORS[card.split('_')[0]] + ' ' + card
+            cards.append(card)
+        hand_string = ", ".join(cards)
+        drawed_card = cards[-1]
 
         await bot.send(f"NOTICE {player.pseudo} :Tu as pioché la carte {drawed_card}. Voici ta main : {hand_string}")
     else:

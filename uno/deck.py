@@ -2,10 +2,18 @@ import random
 from collections import deque
 
 class Deck:
+    """ Paquet de cartes
+    
+    Attributes:
+        cards (str[]): Tableau des cartes du paquet
+    """
+
     def __init__(self):
+        """ Initialise le paquet """
         self.cards = []
 
     def build(self):
+        """ Créer le paquet """
         colors = ["rouge", "vert", "bleu", "jaune"]
 
         for c in colors:
@@ -28,8 +36,10 @@ class Deck:
         random.shuffle(self.cards)
 
     def draw(self):
+        """ Retirer une carte du paquet """
         return self.cards.pop() # Enlever la dernière carte du paquet
     
     def add(self, card):
-        return self.cards.appendleft(card)
+        """ Ajouter une carte dans le paquet """
+        return self.cards.appendleft(card) # Rajouter la carte au début du paquet
     

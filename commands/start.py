@@ -1,9 +1,15 @@
-
-
 from utils.colors import COLORS
 
 
 async def startGame(game, bot, channel):
+    """ Traiter la réponse du bot à l'action Lancer la partie
+
+    Parameters:
+        game (Uno): Partie de Uno 
+        bot (IRCClient): Bot de jeu connecté à l'IRC
+        channel (str): Salon dans lequel le joueur a effectué l'action
+    """
+
     success, message = game.start_game()
 
     if success:
@@ -12,16 +18,16 @@ async def startGame(game, bot, channel):
         for p in game.players:
             hand_string = ''
 
+            cards = []
             for i in range(7):
                 card = p.hand[i]
-                card = COLORS[card.split('_')[0]] + ' ' + card # Ajouter le carré de couleur correspondant
-                if i + 1 == 7:  # Dernière carte de la main
-                    hand_string += card
-                else:
-                    hand_string += card + ', '
+                # Ajouter le carré de couleur correspondant
+                card = COLORS[card.split('_')[0]] + ' ' + card
+                cards.append(card)
+            hand_string = ", ".join(cards)
 
             await bot.send(f"NOTICE {p.pseudo} :Voici ta main : {hand_string}")
-        
+
         current_card = game.current_card
         current_card = COLORS[current_card.split('_')[0]] + ' ' + current_card
         await bot.send(f"PRIVMSG {channel} :La première carte est : {current_card}. C'est à {game.players[game.current_player].pseudo} de jouer.")

@@ -8,20 +8,44 @@ FORBIDDEN_START = [f"joker_couleurs", f"joker_+4", f"rouge_passeTonTour", f"vert
 
 
 class Uno:
+    """ Partie de jeu de Uno
+
+    Attributes:
+        deck (Deck): Paquet de carte
+        started (bool): Statut de la partie
+        players (Player[]): Liste des joueurs membres de la partie
+        current_player (int): Indice du joueur actuel dans le tableau players
+        current_card (str): Carte sur laquelle le joueur actuel doit jouer
+        direction (int): Sens du jeu, avec 1 pour le sens classique et -1 pour le sens inverse
+        ask_color (bool): Flag permettant de savoir si on attend que le joueur choisisse une couleur suite à une carte Joker 
+    """
+
     def __init__(self):
-        self.players = []
-        self.started = False
+        """ Initialise la partie """
 
         self.deck = Deck()
+        self.started = False
+
+        self.players = []
+        self.current_player = 0
 
         self.current_card = None
-        self.current_player = 0
 
         self.direction = 1
 
         self.ask_color = False
 
     def add_player(self, pseudo):
+        """ Ajouter un joueur dans la partie
+
+        Parameters :
+            pseudo (str): Pseudo du joueur à ajouter
+
+        Returns:
+            (bool): Succès de l'ajout du joueur
+            (str): Message justificatif du succès ou de l'échec
+        """
+
         if self.started:  # Partie déjà en cours
             return (False, "ALREADY_STARTED")
 
@@ -32,6 +56,16 @@ class Uno:
         return (True, "OK")
 
     def remove_player(self, pseudo):
+        """ Retirer un joueur de la partie
+
+        Parameters :
+            pseudo (str): Pseudo du joueur à retirer
+
+        Returns:
+            (bool): Succès du retrait du joueur
+            (str): Message justificatif du succès ou de l'échec
+        """
+
         if self.started:
             return (False, "ALREADY_STARTED")
 
@@ -43,9 +77,22 @@ class Uno:
         return (False, "NOT_IN")
 
     def see_players(self):
+        """ Voir la liste des joueurs présents dans la partie
+
+        Returns:
+            (str[]): Liste d'objet Player
+        """
+
         return self.players
 
     def start_game(self):
+        """ Lancer la partie
+
+        Returns:
+            (bool): Succès du lancement de la partie
+            (str): Message justificatif du succès ou de l'échec
+        """
+
         if self.started:  # Partie déjà en cours
             return (False, "ALREADY_STARTED")
 
@@ -70,6 +117,19 @@ class Uno:
         return (True, "OK")
 
     async def play(self, bot, pseudo, channel, msg):
+        """ Traiter l'action Jouer une carte
+
+        Parameters:
+            bot (IRCClient): Bot de jeu connecté à l'IRC
+            pseudo (string): Pseudo du joueur qui a effectué l'action
+            channel (string): Salon dans lequel le joueur a effectué l'action
+            msg (string): Message du joueur composant son action
+
+        Returns:
+            (bool): Succès de l'action du joueur
+            (str): Message justificatif du succès ou de l'échec
+        """
+
         # La partie n'a pas encore commencé
         if not self.started:
             return (False, "NOT_STARTED")
@@ -83,16 +143,16 @@ class Uno:
         if len(parts) < 2:
             return False, "NO_CARD"
 
-        # Le joueur ne possède pas sa carte dans sa main
+        # Le joueur ne possède pas cette carte dans sa main
         player = self.players[self.current_player]
         card = parts[1]
         if card not in player.hand:
             return (False, "NOT_IN_HAND")
 
-        # Vérifier la validité du coup
+        # Vérifier la possibilité d'une action en fonction des règles
         check = checkAction(self, card)
         if not check:
-            return (check, "INVALID")
+            return (check, "INVALID")  # Cette action n'est pas possible
 
         player.play_card(card)  # Retirer la carte de la main du joueur
 
@@ -108,32 +168,38 @@ class Uno:
                 next_player = self.players[(
                     self.current_player + self.direction) % len(self.players)]
 
+                cards = []
                 for _ in range(4):  # Piocher 4 cartes
-                    next_player.add_card(self.deck.draw())
+                    new_card = self.deck.draw()
+                    next_player.add_card(new_card)
+
+                    cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
+                    
+                drawed_string = ", ".join(cards)
 
                 await bot.send(f"PRIVMSG {channel} :Ouille, ça fait mal ! {next_player.pseudo} pioche 4 cartes.")
 
-                nb_card = len(next_player.hand)
-
-                hand_string = ''
-                drawed_string = ''
-                for i in range(nb_card):
-                    card = next_player.hand[i]
-                    # Ajouter le carré de couleur correspondant
-                    card = COLORS[card.split('_')[0]] + ' ' + card
-
-                    if i >= nb_card - 4:  # 4 dernières cartes de la main
-                        drawed_string += card + ', '
-                        if i + 1 == nb_card:  # Dernière carte de la main
-                            hand_string += card
-                            drawed_string += card
-                    else:
-                        hand_string += card + ', '
-
-                await bot.send(f"NOTICE {next_player.pseudo} :Tu as pioché les cartes {drawed_string}. Voici ta main : {hand_string}")
+                await bot.send(f"NOTICE {next_player.pseudo} :Tu as pioché les cartes suivantes : {drawed_string}.")
 
             await self.asking_color(bot, channel)
             return (False, "WAIT_COLOR")
+        elif card_symbol == "+2":
+            # Joueur qui va piocher
+            next_player = self.players[(
+                self.current_player + self.direction) % len(self.players)]
+
+            cards = []
+            for _ in range(2):  # Piocher 2 cartes
+                new_card = self.deck.draw()
+                next_player.add_card(new_card)
+
+                cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
+                
+            drawed_string = ", ".join(cards)
+
+            await bot.send(f"PRIVMSG {channel} :Ouille, ça fait mal ! {next_player.pseudo} pioche 2 cartes.")
+
+            await bot.send(f"NOTICE {next_player.pseudo} :Tu as pioché les cartes suivantes :  {drawed_string}.")
 
         # Tour suivant
         player.draw = False  # Réinitialiser le flag de pioche du joueur
@@ -142,6 +208,16 @@ class Uno:
         return (check, "OK")
 
     def draw_card(self, pseudo):
+        """ Gérer l'action piocher d'un joueur
+
+        Parameters:
+            pseudo (str): Pseudo du joueur qui a effectué l'action
+
+        Returns:
+            (bool): Succès de l'action du joueur
+            (str): Message justificatif du succès ou de l'échec
+        """
+
         # La partie n'a pas encore commencé
         if not self.started:
             return (False, "NOT_STARTED")
@@ -165,14 +241,34 @@ class Uno:
         return (True, "OK")
 
     def next_player(self):
+        """ Passer au joueur suivant """
+
         self.current_player = (self.current_player +
                                self.direction) % len(self.players)
 
     async def asking_color(self, bot, channel):
+        """ Demander au joueur la couleur qu'il souhaite suite à l'usage d'une carte Joker 
+
+        Parameters:
+            bot (IRCClient): Bot de jeu connecté à l'IRC
+            channel (str): Salon dans lequel le bot doit envoyer le message
+        """
+
         await bot.send(f"PRIVMSG {channel} :Quelle nouvelle couleur choisis-tu ?")
-        self.ask_color = True
+        self.ask_color = True  # Une couleur est en attente
 
     def choose_color(self, pseudo, msg):
+        """ Traiter l'action Choisir une couleur 
+
+        Parameters:
+            pseudo (string): Pseudo du joueur qui a effectué l'action
+            msg (string): Message du joueur composant son action
+
+        Returns:
+            (bool): Succès de l'action du joueur
+            (str): Message justificatif du succès ou de l'échec
+        """
+
         # La partie n'a pas encore commencé
         if not self.started:
             return (False, "NOT_STARTED")
@@ -194,6 +290,16 @@ class Uno:
         return (True, "OK")
 
     def pass_turn(self, pseudo):
+        """ Traiter l'action Passer son tour
+
+        Parameters:
+            pseudo (string): Pseudo du joueur qui a effectué l'action
+
+        Returns:
+            (bool): Succès de l'action du joueur
+            (str): Message justificatif du succès ou de l'échec
+        """
+
         # La partie n'a pas encore commencé
         if not self.started:
             return (False, "NOT_STARTED")

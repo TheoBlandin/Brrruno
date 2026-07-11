@@ -14,7 +14,31 @@ from commands.chooseColor import chooseColor
 from commands.passTurn import passTurn
 
 class IRCClient:
+    """ Bot à connecter à l'IRC 
+    
+    Attributes:
+        server (str): Lien du serveur IRC auquel le bot doit se connecter
+        port (str): Port auquel le bot doit se connecter
+        nick (str): Nick du bot
+        username (str): Pseudo du bot
+        realname (str): Vrai nom du bot
+        game (Uno): Partie de Uno gérée par le bot
+        reader (asyncio.StreamReader | None): Stream permettant de lire les messages envoyés sur le serveur IRC
+        writer (asyncio.StreamWriter | None): Stream permettant d'écrire sur le serveur IRC  
+    """
+
     def __init__(self, server, port, nick, username, realname, game):
+        """ Initialiser le bot
+        
+        Parameters:
+            server (str): Lien du serveur IRC auquel le bot doit se connecter
+            port (str): Port auquel le bot doit se connecter
+            nick (str): Nick du bot
+            username (str): Pseudo du bot
+            realname (str): Vrai nom du bot
+            game (Uno): Partie de Uno gérée par le bot
+        """
+
         self.server = server
         self.port = port
         self.nick = nick
@@ -27,6 +51,8 @@ class IRCClient:
         self.writer = None
 
     async def connect(self):
+        """ Connection au serveur IRC """
+
         self.reader, self.writer = await asyncio.open_connection(
             self.server,
             self.port
@@ -47,11 +73,22 @@ class IRCClient:
             print("Erreur arrêt bot:", e)
 
     async def send(self, message):
-        print(">> [W]", message)
+        """ Écrire un message sur le serveur IRC
+        
+        Parameters:
+            message (str): Message à écrire
+        """
+        
         self.writer.write((message + "\r\n").encode())
         await self.writer.drain()
 
     async def recv(self):
+        """ Recevoir un message depuis le serveur IRC 
+        
+        Returns:
+            (str): Message lu sur le serveur IRC
+        """
+
         line = await self.reader.readline()
 
         if not line:
@@ -60,38 +97,14 @@ class IRCClient:
 
         return line.decode(errors="ignore").strip()
 
-    # Commandes
-    async def handle_join(self, user, channel):
-        await joinGame(self.game, self, user, channel)
-
-    async def handle_quit(self, user, channel):
-        await quitGame(self.game, self, user, channel)
-
-    async def handle_players(self, channel):
-        await seePlayers(self.game, self, channel)
-
-    async def handle_start(self, channel):
-        await startGame(self.game, self, channel)
-
-    async def handle_play(self, user, channel, msg):
-        await play(self.game, self, user, channel, msg)
-
-    async def handle_draw(self, user, channel):
-        await draw(self.game, self, user, channel)
-
-    async def handle_choose_color(self, user, channel, msg):
-        await chooseColor(self.game, self, user, channel, msg)
-
-    async def handle_pass(self, user, channel):
-        await passTurn(self.game, self, user, channel)
-
     async def loop(self):
+        """ Boucle d'actions du bot """
+
         registered = False
         self.running = True
 
         while self.running:
             message = await self.recv()
-            print("<< [R]", message)
 
             # PING / PONG
             if message.startswith("PING"):
@@ -101,7 +114,7 @@ class IRCClient:
             if not registered and "001" in message:
                 registered = True
 
-                await self.send(f"PART #accueil")
+                await self.send(f"PART #accueil") # Quitter l'accueil auto-join par défaut
 
                 for channel in config.CHANNELS:
                     await self.send(f"JOIN {channel}")
@@ -114,18 +127,18 @@ class IRCClient:
 
                 match msg.lower():
                     case "!join": # Rejoindre la partie
-                        await self.handle_join(user, channel)
+                        await joinGame(self.game, self, user, channel)
                     case "!quit": # Quitter la partie
-                        await self.handle_quit(user, channel)
+                        await quitGame(self.game, self, user, channel)
                     case "!players": # Voir la liste des joueurs
-                        await self.handle_players(channel)
+                        await seePlayers(self.game, self, channel)
                     case "!start": # Lancer la partie
-                        await self.handle_start(channel)
+                        await startGame(self.game, self, channel)
                     case c if c.startswith("!play") : # Jouer une carte
-                        await self.handle_play(user, channel, msg)
+                        await play(self.game, self, user, channel, msg)
                     case "!draw": # Piocher une carte
-                        await self.handle_draw(user, channel)
+                        await draw(self.game, self, user, channel)
                     case c if c in ["!rouge", "!vert", "!bleu", "!jaune"]: # Choisir une couleur en cas de carte Joker
-                        await self.handle_choose_color(user, channel, msg)
+                        await chooseColor(self.game, self, user, channel, msg)
                     case "!pass": # Passer ton tour
-                        await self.handle_pass(user, channel)
+                        await passTurn(self.game, self, user, channel)

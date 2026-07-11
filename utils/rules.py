@@ -2,9 +2,9 @@
 def checkAction(game, player_card):
     """ Vérifie si le coup est possible.
 
-    Args:
-        game (Uno) - Jeu en cours
-        player_card (string) - Carte du joueur
+    Parameters:
+        game (Uno): Jeu en cours
+        player_card (string): Carte du joueur
 
     Returns:
         boolean: True si le coup est possible, False sinon
@@ -23,9 +23,9 @@ def checkAction(game, player_card):
 def checkPossibilityAction(game, player_hand):
     """ Vérifie si un coup est possible dans la main du joueur.
 
-    Args:
-        game (Uno) - Jeu en cours
-        player_hand (string[]) - Main du joueur
+    Parameters:
+        game (Uno): Jeu en cours
+        player_hand (str[]): Main du joueur
 
     Returns:
         boolean: True si un coup est possible, False sinon

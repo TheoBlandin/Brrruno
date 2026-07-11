@@ -2,11 +2,21 @@ from utils.colors import COLORS
 
 
 async def passTurn(game, bot, pseudo, channel):
+    """ Traiter la réponse du bot à l'action Passer son tour
+
+    Parameters:
+        game (Uno): Partie de Uno
+        bot (IRCClient): Bot de jeu connecté à l'IRC
+        pseudo (str): Pseudo du joueur ayant effectué l'action
+        channel (str): Salon dans lequel le joueur a effectué l'action
+    """
+
     success, message = game.pass_turn(pseudo)
 
     if success:
         player = game.players[game.current_player]
-        if game.current_card.split('_')[1] == 'undefined': # Cas où le joueur précédent a passé son tour après un joker
+        # Cas où le joueur précédent a passé son tour après un joker
+        if game.current_card.split('_')[1] == 'undefined':
             color = game.current_card.split('_')[0]
             color = COLORS[color] + ' ' + color
 
@@ -14,19 +24,17 @@ async def passTurn(game, bot, pseudo, channel):
         else:
             current_card = COLORS[game.current_card.split(
                 '_')[0]] + ' ' + game.current_card
-            
+
             await bot.send(f"PRIVMSG {channel} :{pseudo} a passé son tour. C'est à {player.pseudo} de jouer. La carte est {current_card}")
 
         nb_card = len(player.hand)
-        hand_string = ''
+        cards = []
         for i in range(nb_card):
             card = player.hand[i]
             # Ajouter le carré de couleur correspondant
             card = COLORS[card.split('_')[0]] + ' ' + card
-            if i + 1 == nb_card:  # Dernière carte de la main
-                hand_string += card
-            else:
-                hand_string += card + ', '
+            cards.append(card)
+        hand_string = ", ".join(cards)
 
         await bot.send(f"NOTICE {player.pseudo} :Voici ta main : {hand_string}")
     else:
