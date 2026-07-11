@@ -5,16 +5,24 @@ async def passTurn(game, bot, pseudo, channel):
     success, message = game.pass_turn(pseudo)
 
     if success:
-        current_card = COLORS[game.current_card.split('_')[0]] + ' ' + game.current_card
         player = game.players[game.current_player]
+        if game.current_card.split('_')[1] == 'undefined': # Cas où le joueur précédent a passé son tour après un joker
+            color = game.current_card.split('_')[0]
+            color = COLORS[color] + ' ' + color
 
-        await bot.send(f"PRIVMSG {channel} :{pseudo} a passé son tour. C'est à {player.pseudo} de jouer. La carte est {current_card}")
+            await bot.send(f"PRIVMSG {channel} :{pseudo} a passé son tour. C'est à {player.pseudo} de jouer. La couleur est {color}")
+        else:
+            current_card = COLORS[game.current_card.split(
+                '_')[0]] + ' ' + game.current_card
+            
+            await bot.send(f"PRIVMSG {channel} :{pseudo} a passé son tour. C'est à {player.pseudo} de jouer. La carte est {current_card}")
 
         nb_card = len(player.hand)
         hand_string = ''
         for i in range(nb_card):
             card = player.hand[i]
-            card = COLORS[card.split('_')[0]] + ' ' + card # Ajouter le carré de couleur correspondant
+            # Ajouter le carré de couleur correspondant
+            card = COLORS[card.split('_')[0]] + ' ' + card
             if i + 1 == nb_card:  # Dernière carte de la main
                 hand_string += card
             else:

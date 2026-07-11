@@ -1,5 +1,6 @@
 from uno.deck import Deck
 from uno.player import Player
+from utils.colors import COLORS
 from utils.rules import checkPossibilityAction, checkAction
 
 FORBIDDEN_START = [f"joker_couleurs", f"joker_+4", f"rouge_passeTonTour", f"vert_passeTonTour", f"bleu_passeTonTour", f"jaune_passeTonTour",
@@ -31,14 +32,15 @@ class Uno:
         return (True, "OK")
 
     def remove_player(self, pseudo):
-        if self.started:  # Partie déjà en cours
+        if self.started:
             return (False, "ALREADY_STARTED")
 
-        if pseudo not in self.players:  # Joueur non enregistré
-            return (False, "NOT_IN")
+        for player in self.players:
+            if player.pseudo == pseudo:
+                self.players.remove(player)
+                return (True, "OK")
 
-        self.players.pop(self.players.index(Player(pseudo)))
-        return (True, "OK")
+        return (False, "NOT_IN")
 
     def see_players(self):
         return self.players
@@ -98,11 +100,38 @@ class Uno:
         card_color, card_symbol = card.split('_')
         if card_symbol == "changeDeSens":
             self.direction *= -1
-
         elif card_symbol == "passeTonTour":
             self.next_player()  # Passer directement le tour du joueur suivant
-
         elif card_color == "joker":
+            if card_symbol == "+4":  # Carte joker +4
+                # Joueur qui va piocher
+                next_player = self.players[(
+                    self.current_player + self.direction) % len(self.players)]
+
+                for _ in range(4):  # Piocher 4 cartes
+                    next_player.add_card(self.deck.draw())
+
+                await bot.send(f"PRIVMSG {channel} :Ouille, ça fait mal ! {next_player.pseudo} pioche 4 cartes.")
+
+                nb_card = len(next_player.hand)
+
+                hand_string = ''
+                drawed_string = ''
+                for i in range(nb_card):
+                    card = next_player.hand[i]
+                    # Ajouter le carré de couleur correspondant
+                    card = COLORS[card.split('_')[0]] + ' ' + card
+
+                    if i >= nb_card - 4:  # 4 dernières cartes de la main
+                        drawed_string += card + ', '
+                        if i + 1 == nb_card:  # Dernière carte de la main
+                            hand_string += card
+                            drawed_string += card
+                    else:
+                        hand_string += card + ', '
+
+                await bot.send(f"NOTICE {next_player.pseudo} :Tu as pioché les cartes {drawed_string}. Voici ta main : {hand_string}")
+
             await self.asking_color(bot, channel)
             return (False, "WAIT_COLOR")
 
@@ -156,9 +185,11 @@ class Uno:
         if not self.ask_color:
             return (False, "NOT_ASKED")
 
-        # Construction d'une fausse carte pour la couleur
+        # Construction d'une fausse carte pour la couleur et tour suivant
         self.current_card = msg.replace('!', '') + "_undefined"
         self.ask_color = False  # La couleur n'est plus demandée
+        # Réinitialiser le flag de pioche du joueur
+        self.players[self.current_player].draw = False
         self.next_player()  # Passer la main au joueur suivant
         return (True, "OK")
 
@@ -170,16 +201,17 @@ class Uno:
         # Ce n'est pas à ce joueur de jouer
         if self.players[self.current_player].pseudo != pseudo:
             return (False, "NOT_YOUR_TURN")
-        
+
         player = self.players[self.current_player]
 
         # Le joueur peut jouer sans passer son tour
         if checkPossibilityAction(self, player.hand):
             return (False, "MOVE_POSSIBLE")
-        
+
         # Le joueur n'a pas encore essayé de piocher
         if not player.draw:
             return (False, "DRAW_POSSIBLE")
-        
+
+        player.draw = False  # Réinitialiser le flag de pioche du joueur
         self.next_player()  # Passer la main au joueur suivant
         return (True, "OK")
