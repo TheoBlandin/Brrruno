@@ -11,6 +11,7 @@ from commands.start import startGame
 from commands.play import play
 from commands.draw import draw
 from commands.chooseColor import chooseColor
+from commands.passTurn import passTurn
 
 class IRCClient:
     def __init__(self, server, port, nick, username, realname, game):
@@ -81,6 +82,9 @@ class IRCClient:
     async def handle_choose_color(self, user, channel, msg):
         await chooseColor(self.game, self, user, channel, msg)
 
+    async def handle_pass(self, user, channel):
+        await passTurn(self.game, self, user, channel)
+
     async def loop(self):
         registered = False
         self.running = True
@@ -123,3 +127,5 @@ class IRCClient:
                         await self.handle_draw(user, channel)
                     case c if c in ["!rouge", "!vert", "!bleu", "!jaune"]: # Choisir une couleur en cas de carte Joker
                         await self.handle_choose_color(user, channel, msg)
+                    case "!pass": # Passer ton tour
+                        await self.handle_pass(user, channel)

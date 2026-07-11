@@ -1,6 +1,6 @@
 from uno.deck import Deck
 from uno.player import Player
-from utils.rules import checkPlay
+from utils.rules import checkPossibilityAction, checkAction
 
 FORBIDDEN_START = [f"joker_couleurs", f"joker_+4", f"rouge_passeTonTour", f"vert_passeTonTour", f"bleu_passeTonTour", f"jaune_passeTonTour",
                    f"rouge_changeDeSens", f"vert_changeDeSens", f"bleu_changeDeSens", f"jaune_changeDeSens", f"rouge_+2", f"vert_+2", f"bleu_+2", f"jaune_+2"]
@@ -75,7 +75,7 @@ class Uno:
         # Ce n'est pas à ce joueur de jouer
         if self.players[self.current_player].pseudo != pseudo:
             return (False, "NOT_YOUR_TURN")
-        
+
         # Aucune carte sélectionnée
         parts = msg.split()
         if len(parts) < 2:
@@ -88,10 +88,10 @@ class Uno:
             return (False, "NOT_IN_HAND")
 
         # Vérifier la validité du coup
-        check, message = checkPlay(self, card)
+        check = checkAction(self, card)
         if not check:
-            return (check, message)
-        
+            return (check, "INVALID")
+
         player.play_card(card)  # Retirer la carte de la main du joueur
 
         # Gestion des cartes spéciales
@@ -101,15 +101,16 @@ class Uno:
 
         elif card_symbol == "passeTonTour":
             self.next_player()  # Passer directement le tour du joueur suivant
-        
+
         elif card_color == "joker":
             await self.asking_color(bot, channel)
             return (False, "WAIT_COLOR")
 
         # Tour suivant
+        player.draw = False  # Réinitialiser le flag de pioche du joueur
         self.current_card = card  # Mettre à jour la carte du haut du paquet
         self.next_player()  # Passer la main au joueur suivant
-        return (check, message)
+        return (check, "OK")
 
     def draw_card(self, pseudo):
         # La partie n'a pas encore commencé
@@ -121,7 +122,17 @@ class Uno:
             return (False, "NOT_YOUR_TURN")
 
         player = self.players[self.current_player]
+
+        # Le joueur a déjà pioché ce tour-ci
+        if player.draw:
+            return (False, "ALREADY_DRAW")
+
+        # Le joueur peut jouer sans piocher
+        if checkPossibilityAction(self, player.hand):
+            return (False, "MOVE_POSSIBLE")
+
         player.add_card(self.deck.draw())
+        player.draw = True
         return (True, "OK")
 
     def next_player(self):
@@ -136,16 +147,39 @@ class Uno:
         # La partie n'a pas encore commencé
         if not self.started:
             return (False, "NOT_STARTED")
-        
+
+        # Ce n'est pas à ce joueur de jouer
+        if self.players[self.current_player].pseudo != pseudo:
+            return (False, "NOT_YOUR_TURN")
+
+        # La couleur n'a pas été demandée
+        if not self.ask_color:
+            return (False, "NOT_ASKED")
+
+        # Construction d'une fausse carte pour la couleur
+        self.current_card = msg.replace('!', '') + "_undefined"
+        self.ask_color = False  # La couleur n'est plus demandée
+        self.next_player()  # Passer la main au joueur suivant
+        return (True, "OK")
+
+    def pass_turn(self, pseudo):
+        # La partie n'a pas encore commencé
+        if not self.started:
+            return (False, "NOT_STARTED")
+
         # Ce n'est pas à ce joueur de jouer
         if self.players[self.current_player].pseudo != pseudo:
             return (False, "NOT_YOUR_TURN")
         
-        # La couleur n'a pas été demandée
-        if not self.ask_color:
-            return (False, "NOT_ASKED")
+        player = self.players[self.current_player]
+
+        # Le joueur peut jouer sans passer son tour
+        if checkPossibilityAction(self, player.hand):
+            return (False, "MOVE_POSSIBLE")
         
-        self.current_card = msg.replace('!', '') + "_undefined" # Construction d'une fausse carte pour la couleur
-        self.ask_color = False # La couleur n'est plus demandée
+        # Le joueur n'a pas encore essayé de piocher
+        if not player.draw:
+            return (False, "DRAW_POSSIBLE")
+        
         self.next_player()  # Passer la main au joueur suivant
         return (True, "OK")
