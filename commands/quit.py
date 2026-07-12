@@ -8,7 +8,7 @@ async def quitGame(game, bot, pseudo, channel):
         channel (str): Salon dans lequel le joueur a effectué l'action
     """
 
-    success, message = game.remove_player(pseudo)
+    success, message = game.remove_player(pseudo, True)
 
     if success:
         await bot.send(f"PRIVMSG {channel} :{pseudo} a quitté la partie.")

@@ -118,7 +118,7 @@ class IRCClient:
 
                 for channel in config.CHANNELS:
                     await self.send(f"JOIN {channel}")
-                    await self.send(f"PRIVMSG {channel} :Prêts pour une partie de Uno ? Taper !join pour rejoindre la partie")
+                    await self.send(f"PRIVMSG {channel} :Prêts pour une partie de Uno ? Tapez !join pour rejoindre la partie")
 
             # Gestion des commandes
             parsed = parse_privmsg(message)

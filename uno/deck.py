@@ -14,6 +14,7 @@ class Deck:
 
     def build(self):
         """ Créer le paquet """
+
         colors = ["rouge", "vert", "bleu", "jaune"]
 
         for c in colors:
@@ -43,3 +44,18 @@ class Deck:
         """ Ajouter une carte dans le paquet """
         return self.cards.appendleft(card) # Rajouter la carte au début du paquet
     
+    def refill(self, hands, current_card):
+        """ Re-remplir le paquet lorsque celui-ci est vide, en supprimant les cartes présentes dans les mains des joueurs 
+        
+        Parameters:
+            hands (str[][]): Liste des mains des joueurs
+            current_card (str): Carte de jeu actuelle
+        """
+
+        self.build() # Reconstruire un paquet 
+
+        for hand in hands:
+            for card in hand:
+                self.cards.remove(card)
+
+        self.cards.remove(current_card)

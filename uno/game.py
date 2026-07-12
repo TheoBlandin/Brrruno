@@ -55,18 +55,19 @@ class Uno:
         self.players.append(Player(pseudo))
         return (True, "OK")
 
-    def remove_player(self, pseudo):
+    def remove_player(self, pseudo, isCommand):
         """ Retirer un joueur de la partie
 
         Parameters :
             pseudo (str): Pseudo du joueur à retirer
+            isCommand (bool): Source de l'appel avec True si ça provient de la commande !quit, False sinon
 
         Returns:
             (bool): Succès du retrait du joueur
             (str): Message justificatif du succès ou de l'échec
         """
 
-        if self.started:
+        if self.started and isCommand:
             return (False, "ALREADY_STARTED")
 
         for player in self.players:
@@ -201,6 +202,14 @@ class Uno:
 
             await bot.send(f"NOTICE {next_player.pseudo} :Tu as pioché les cartes suivantes :  {drawed_string}.")
 
+        if len(player.hand) == 0: # Le joueur n'a plus de carte en main
+            await bot.send(f"PRIVMSG {channel} :{player.pseudo} a terminé la partie, félicitations !")
+            self.remove_player(player.pseudo, False)
+            if len(self.players) == 1: # Il n'y a plus qu'un seul joueur dans la partie
+                await bot.send(f"PRIVMSG {channel} :La partie est terminée.")
+                self.started = False
+                return (False, "END")
+
         # Tour suivant
         player.draw = False  # Réinitialiser le flag de pioche du joueur
         self.current_card = card  # Mettre à jour la carte du haut du paquet
@@ -238,6 +247,10 @@ class Uno:
 
         player.add_card(self.deck.draw())
         player.draw = True
+
+        if len(self.deck.cards) == 0: # pioche vide
+            self.deck.refill() # Recréer une pioche avec les cartes non en jeu
+
         return (True, "OK")
 
     def next_player(self):

@@ -15,7 +15,6 @@ async def play(game, bot, pseudo, channel, msg):
     success, message = await game.play(bot, pseudo, channel, msg)
 
     if success:
-        print ('current card : ', game.current_card)
         current_card = COLORS[game.current_card.split(
             '_')[0]] + ' ' + game.current_card
         player = game.players[game.current_player]
@@ -44,3 +43,5 @@ async def play(game, bot, pseudo, channel, msg):
                 await bot.send(f"PRIVMSG {channel} :Cette carte n'est pas dans ta main.")
             case "INVALID":
                 await bot.send(f"PRIVMSG {channel} :Ce coup est invalide.")
+            case "END":
+                await bot.send(f"PRIVMSG {channel} :Prêts pour une nouvelle partie ? Tapez !join pour rejoindre la partie !")
