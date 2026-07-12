@@ -3,7 +3,7 @@ def checkAction(game, player_card):
     """ Vérifie si le coup est possible.
 
     Parameters:
-        game (Uno): Jeu en cours
+        game (Game): Jeu en cours
         player_card (string): Carte du joueur
 
     Returns:
@@ -24,7 +24,7 @@ def checkPossibilityAction(game, player_hand):
     """ Vérifie si un coup est possible dans la main du joueur.
 
     Parameters:
-        game (Uno): Jeu en cours
+        game (Game): Jeu en cours
         player_hand (str[]): Main du joueur
 
     Returns:

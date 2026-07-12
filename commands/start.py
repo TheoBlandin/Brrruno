@@ -5,7 +5,7 @@ async def startGame(game, bot, channel):
     """ Traiter la réponse du bot à l'action Lancer la partie
 
     Parameters:
-        game (Uno): Partie de Uno 
+        game (Game): Partie de Uno 
         bot (IRCClient): Bot de jeu connecté à l'IRC
         channel (str): Salon dans lequel le joueur a effectué l'action
     """

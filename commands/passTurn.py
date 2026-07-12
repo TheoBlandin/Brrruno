@@ -5,7 +5,7 @@ async def passTurn(game, bot, pseudo, channel):
     """ Traiter la réponse du bot à l'action Passer son tour
 
     Parameters:
-        game (Uno): Partie de Uno
+        game (Game): Partie de Uno
         bot (IRCClient): Bot de jeu connecté à l'IRC
         pseudo (str): Pseudo du joueur ayant effectué l'action
         channel (str): Salon dans lequel le joueur a effectué l'action
@@ -27,6 +27,18 @@ async def passTurn(game, bot, pseudo, channel):
 
             await bot.send(f"PRIVMSG {channel} :{pseudo} a passé son tour. C'est à {player.pseudo} de jouer. La carte est {current_card}")
 
+        if len(player.hand) == 1 and not player.uno: # Le joueur n'a pas dit UNO
+            cards = []
+            for _ in range(2):  # Piocher 2 cartes
+                new_card = game.deck.draw()
+                player.add_card(new_card)
+
+                cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
+            drawed_string = ", ".join(cards)
+
+            await bot.send(f"PRIVMSG {channel} :{player.pseudo} n'a pas dit UNO ! Tu pioche 2 cartes.")
+            await bot.send(f"NOTICE {player.pseudo} :Tu as pioché les cartes suivantes : {drawed_string}.")
+            
         nb_card = len(player.hand)
         cards = []
         for i in range(nb_card):

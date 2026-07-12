@@ -3,11 +3,11 @@ import asyncio
 import config
 from irc.client import IRCClient
 
-from uno.game import Uno
+from game.game import Game
 
 
 async def main():
-    game = Uno()  # initialiser le jeu
+    game = Game()  # initialiser le jeu
 
     bot = IRCClient(
         config.SERVER,

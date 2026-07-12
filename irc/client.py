@@ -12,31 +12,33 @@ from commands.play import play
 from commands.draw import draw
 from commands.chooseColor import chooseColor
 from commands.passTurn import passTurn
+from commands.uno import uno
+
 
 class IRCClient:
     """ Bot à connecter à l'IRC 
-    
+
     Attributes:
         server (str): Lien du serveur IRC auquel le bot doit se connecter
         port (str): Port auquel le bot doit se connecter
         nick (str): Nick du bot
         username (str): Pseudo du bot
         realname (str): Vrai nom du bot
-        game (Uno): Partie de Uno gérée par le bot
+        game (Game): Partie de Uno gérée par le bot
         reader (asyncio.StreamReader | None): Stream permettant de lire les messages envoyés sur le serveur IRC
         writer (asyncio.StreamWriter | None): Stream permettant d'écrire sur le serveur IRC  
     """
 
     def __init__(self, server, port, nick, username, realname, game):
         """ Initialiser le bot
-        
+
         Parameters:
             server (str): Lien du serveur IRC auquel le bot doit se connecter
             port (str): Port auquel le bot doit se connecter
             nick (str): Nick du bot
             username (str): Pseudo du bot
             realname (str): Vrai nom du bot
-            game (Uno): Partie de Uno gérée par le bot
+            game (Game): Partie de Uno gérée par le bot
         """
 
         self.server = server
@@ -74,17 +76,17 @@ class IRCClient:
 
     async def send(self, message):
         """ Écrire un message sur le serveur IRC
-        
+
         Parameters:
             message (str): Message à écrire
         """
-        
+
         self.writer.write((message + "\r\n").encode())
         await self.writer.drain()
 
     async def recv(self):
         """ Recevoir un message depuis le serveur IRC 
-        
+
         Returns:
             (str): Message lu sur le serveur IRC
         """
@@ -114,7 +116,8 @@ class IRCClient:
             if not registered and "001" in message:
                 registered = True
 
-                await self.send(f"PART #accueil") # Quitter l'accueil auto-join par défaut
+                # Quitter l'accueil auto-join par défaut
+                await self.send(f"PART #accueil")
 
                 for channel in config.CHANNELS:
                     await self.send(f"JOIN {channel}")
@@ -126,19 +129,22 @@ class IRCClient:
                 user, channel, msg = parsed
 
                 match msg.lower():
-                    case "!join": # Rejoindre la partie
+                    case "!join":  # Rejoindre la partie
                         await joinGame(self.game, self, user, channel)
-                    case "!quit": # Quitter la partie
+                    case "!quit":  # Quitter la partie
                         await quitGame(self.game, self, user, channel)
-                    case "!players": # Voir la liste des joueurs
+                    case "!players":  # Voir la liste des joueurs
                         await seePlayers(self.game, self, channel)
-                    case "!start": # Lancer la partie
+                    case "!start":  # Lancer la partie
                         await startGame(self.game, self, channel)
-                    case c if c.startswith("!play") : # Jouer une carte
+                    case c if c.startswith("!play"):  # Jouer une carte
                         await play(self.game, self, user, channel, msg)
-                    case "!draw": # Piocher une carte
+                    case "!draw":  # Piocher une carte
                         await draw(self.game, self, user, channel)
-                    case c if c in ["!rouge", "!vert", "!bleu", "!jaune"]: # Choisir une couleur en cas de carte Joker
+                    # Choisir une couleur en cas de carte Joker
+                    case c if c in ["!rouge", "!vert", "!bleu", "!jaune"]:
                         await chooseColor(self.game, self, user, channel, msg)
-                    case "!pass": # Passer ton tour
+                    case "!pass":  # Passer ton tour
                         await passTurn(self.game, self, user, channel)
+                    case "!uno":  # Crier UNO
+                        await uno(self.game, self, user, channel)

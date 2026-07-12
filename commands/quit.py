@@ -2,7 +2,7 @@ async def quitGame(game, bot, pseudo, channel):
     """ Traiter la réponse du bot à l'action Quitter la partie
 
     Parameters:
-        game (Uno): Partie de Uno
+        game (Game): Partie de Uno
         bot (IRCClient): Bot de jeu connecté à l'IRC
         pseudo (str): Pseudo du joueur ayant effectué l'action
         channel (str): Salon dans lequel le joueur a effectué l'action

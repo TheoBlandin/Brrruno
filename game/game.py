@@ -1,5 +1,5 @@
-from uno.deck import Deck
-from uno.player import Player
+from game.deck import Deck
+from game.player import Player
 from utils.colors import COLORS
 from utils.rules import checkPossibilityAction, checkAction
 
@@ -7,7 +7,7 @@ FORBIDDEN_START = [f"joker_couleurs", f"joker_+4", f"rouge_passeTonTour", f"vert
                    f"rouge_changeDeSens", f"vert_changeDeSens", f"bleu_changeDeSens", f"jaune_changeDeSens", f"rouge_+2", f"vert_+2", f"bleu_+2", f"jaune_+2"]
 
 
-class Uno:
+class Game:
     """ Partie de jeu de Uno
 
     Attributes:
@@ -15,6 +15,7 @@ class Uno:
         started (bool): Statut de la partie
         players (Player[]): Liste des joueurs membres de la partie
         current_player (int): Indice du joueur actuel dans le tableau players
+        finish_order (str[]): Pseudo des gagnants, par ordre du plus rapide
         current_card (str): Carte sur laquelle le joueur actuel doit jouer
         direction (int): Sens du jeu, avec 1 pour le sens classique et -1 pour le sens inverse
         ask_color (bool): Flag permettant de savoir si on attend que le joueur choisisse une couleur suite à une carte Joker 
@@ -28,6 +29,7 @@ class Uno:
 
         self.players = []
         self.current_player = 0
+        self.finish_order = []
 
         self.current_card = None
 
@@ -174,8 +176,9 @@ class Uno:
                     new_card = self.deck.draw()
                     next_player.add_card(new_card)
 
-                    cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
-                    
+                    cards.append(
+                        COLORS[new_card.split('_')[0]] + ' ' + new_card)
+
                 drawed_string = ", ".join(cards)
 
                 await bot.send(f"PRIVMSG {channel} :Ouille, ça fait mal ! {next_player.pseudo} pioche 4 cartes.")
@@ -195,19 +198,20 @@ class Uno:
                 next_player.add_card(new_card)
 
                 cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
-                
+
             drawed_string = ", ".join(cards)
 
             await bot.send(f"PRIVMSG {channel} :Ouille, ça fait mal ! {next_player.pseudo} pioche 2 cartes.")
 
             await bot.send(f"NOTICE {next_player.pseudo} :Tu as pioché les cartes suivantes :  {drawed_string}.")
 
-        if len(player.hand) == 0: # Le joueur n'a plus de carte en main
+        if len(player.hand) == 0:  # Le joueur n'a plus de carte en main
             await bot.send(f"PRIVMSG {channel} :{player.pseudo} a terminé la partie, félicitations !")
             self.remove_player(player.pseudo, False)
-            if len(self.players) == 1: # Il n'y a plus qu'un seul joueur dans la partie
-                await bot.send(f"PRIVMSG {channel} :La partie est terminée.")
-                self.started = False
+            # Ajouter le joueur à la liste des gagnants
+            self.finish_order.append(player.pseudo)
+            if len(self.players) == 1:  # Il n'y a plus qu'un seul joueur dans la partie
+                self.started = False  # Fin de la partie
                 return (False, "END")
 
         # Tour suivant
@@ -247,9 +251,10 @@ class Uno:
 
         player.add_card(self.deck.draw())
         player.draw = True
+        player.uno = False # Réinitialiser Uno
 
-        if len(self.deck.cards) == 0: # pioche vide
-            self.deck.refill() # Recréer une pioche avec les cartes non en jeu
+        if len(self.deck.cards) == 0:  # pioche vide
+            self.deck.refill()  # Recréer une pioche avec les cartes non en jeu
 
         return (True, "OK")
 
@@ -270,7 +275,7 @@ class Uno:
         await bot.send(f"PRIVMSG {channel} :Quelle nouvelle couleur choisis-tu ?")
         self.ask_color = True  # Une couleur est en attente
 
-    def choose_color(self, pseudo, msg):
+    async def choose_color(self, bot, pseudo, channel, msg):
         """ Traiter l'action Choisir une couleur 
 
         Parameters:
@@ -333,4 +338,32 @@ class Uno:
 
         player.draw = False  # Réinitialiser le flag de pioche du joueur
         self.next_player()  # Passer la main au joueur suivant
+        return (True, "OK")
+
+    def uno(self, pseudo):
+        """ Traiter l'action Crier UNO
+
+        Parameters:
+            pseudo (string): Pseudo du joueur qui a effectué l'action
+
+        Returns:
+            (bool): Succès de l'action du joueur
+            (str): Message justificatif du succès ou de l'échec
+        """
+
+        # La partie n'a pas encore commencé
+        if not self.started:
+            return (False, "NOT_STARTED")
+        
+        for player in self.players:
+            if player.pseudo == pseudo:
+                uno_player = player
+
+        if uno_player.uno :
+            return (False, "ALREADY_UNO")
+
+        if len(uno_player.hand) != 1: # Le joueur a plus d'une seule carte dans sa main
+            return (False, "NO_UNO")
+        
+        uno_player.uno = True
         return (True, "OK")

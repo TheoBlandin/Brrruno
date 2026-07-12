@@ -5,6 +5,7 @@ class Player:
         pseudo (str): Pseudo du joueur
         hand (str[]): Cartes composants la main du joueur
         draw (bool): Flag pour savoir si un joueur a déjà pioché
+        uno (bool): Flag pour savoir si un joueur a crié UNO
     """
 
     def __init__(self, pseudo):
@@ -17,6 +18,7 @@ class Player:
         self.pseudo = pseudo
         self.hand = []
         self.draw = False
+        self.uno = False
 
     def add_card(self, card):
         """ Ajouter une carte dans la main du joueur

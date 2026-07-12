@@ -1,11 +1,12 @@
 from utils.colors import COLORS
+from utils.winners import WINNERS
 
 
 async def play(game, bot, pseudo, channel, msg):
     """ Traiter la réponse du bot à l'action Jouer une carte
 
     Parameters:
-        game (Uno): Partie de Uno 
+        game (Game): Partie de Uno 
         bot (IRCClient): Bot de jeu connecté à l'IRC
         pseudo (str): Pseudo du joueur ayant effectué l'action
         channel (str): Salon dans lequel le joueur a effectué l'action
@@ -20,6 +21,18 @@ async def play(game, bot, pseudo, channel, msg):
         player = game.players[game.current_player]
 
         await bot.send(f"PRIVMSG {channel} :La nouvelle carte est {current_card}. C'est à {player.pseudo} de jouer.")
+
+        if len(player.hand) == 1 and not player.uno: # Le joueur n'a pas dit UNO
+            cards = []
+            for _ in range(2):  # Piocher 2 cartes
+                new_card = game.deck.draw()
+                player.add_card(new_card)
+
+                cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
+            drawed_string = ", ".join(cards)
+
+            await bot.send(f"PRIVMSG {channel} :{player.pseudo} n'a pas dit UNO ! Tu pioche 2 cartes.")
+            await bot.send(f"NOTICE {player.pseudo} :Tu as pioché les cartes suivantes : {drawed_string}.")
 
         nb_card = len(player.hand)
         cards = []
@@ -44,4 +57,11 @@ async def play(game, bot, pseudo, channel, msg):
             case "INVALID":
                 await bot.send(f"PRIVMSG {channel} :Ce coup est invalide.")
             case "END":
+                winners = []
+                for i in range(game.finish_order):
+                    winner = WINNERS[i] if i < 3 else '' + game.finish_order[i]
+                    winners.append(winner)
+                winner_string = ", ".join(winners)
+
+                await bot.send(f"PRIVMSG {channel} :La partie est terminée, voici le classement : {winner_string}")
                 await bot.send(f"PRIVMSG {channel} :Prêts pour une nouvelle partie ? Tapez !join pour rejoindre la partie !")

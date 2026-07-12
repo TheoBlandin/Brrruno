@@ -5,7 +5,7 @@ async def draw(game, bot, pseudo, channel):
     """ Traiter la réponse du bot à l'action Piocher une carte
 
     Parameters:
-        game (Uno): Partie de Uno à lancer
+        game (Game): Partie de Uno
         bot (IRCClient): Bot de jeu connecté à l'IRC
         pseudo (str): Pseudo du joueur ayant effectué l'action
         channel (str): Salon dans lequel le joueur a effectué l'action
