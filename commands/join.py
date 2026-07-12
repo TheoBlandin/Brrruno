@@ -11,10 +11,10 @@ async def joinGame(game, bot, pseudo, channel):
     success, message = game.add_player(pseudo)
 
     if success:
-        await bot.send(f"PRIVMSG {channel} :{pseudo} a rejoint la partie.")
+        await bot.send(f"PRIVMSG {channel} :\x02{pseudo} a rejoint la partie.\x02")
     else:
         match message:
             case "ALREADY_STARTED":
-                await bot.send(f"PRIVMSG {channel} :La partie est déjà en cours.")
+                await bot.send(f"PRIVMSG {channel} :\x02La partie est déjà en cours.\x02")
             case "ALREADY_IN":
-                await bot.send(f"PRIVMSG {channel} :Tu es déjà dans la partie.")
+                await bot.send(f"PRIVMSG {channel} :\x02Tu es déjà dans la partie.\x02")

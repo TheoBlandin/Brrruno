@@ -24,3 +24,5 @@ CHANNELS = "#channel_1","#channel_2" # Noms des channels à rejoindre, sans espa
 **!pass** : Passer son tour
 
 **!rouge** ou **!vert** ou **!bleu** ou **!jaune** : Choisir une couleur suite à une carte Joker
+
+**!uno** : Crier UNO

@@ -11,7 +11,7 @@ async def seePlayers(game, bot, channel):
     nbPlayers = len(players)
 
     if nbPlayers == 0:
-        await bot.send(f"PRIVMSG {channel} :Il n'y a aucun joueur d'enregistrer.")
+        await bot.send(f"PRIVMSG {channel} :\x02Il n'y a aucun joueur d'enregistrer.\x02")
 
     else:
         players_string = ''
@@ -21,4 +21,4 @@ async def seePlayers(game, bot, channel):
             else:
                 players_string += players[i].pseudo + ', '
 
-        await bot.send(f"PRIVMSG {channel} :Liste des joueurs : {players_string}")
+        await bot.send(f"PRIVMSG {channel} :\x02Liste des joueurs : {players_string}\x02")

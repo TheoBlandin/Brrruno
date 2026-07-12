@@ -8,13 +8,11 @@ async def quitGame(game, bot, pseudo, channel):
         channel (str): Salon dans lequel le joueur a effectué l'action
     """
 
-    success, message = game.remove_player(pseudo, True)
+    success, message = game.remove_player(pseudo)
 
     if success:
-        await bot.send(f"PRIVMSG {channel} :{pseudo} a quitté la partie.")
+        await bot.send(f"PRIVMSG {channel} :\x02{pseudo} a quitté la partie.\x02")
     else:
         match message:
-            case "ALREADY_STARTED":
-                await bot.send(f"PRIVMSG {channel} :Tu ne peux pas quitter une partie en cours.")
             case "NOT_IN":
-                await bot.send(f"PRIVMSG {channel} :Tu n'es pas enregistré comme joueur.")
+                await bot.send(f"PRIVMSG {channel} :\x02Tu n'es pas enregistré comme joueur.\x02")

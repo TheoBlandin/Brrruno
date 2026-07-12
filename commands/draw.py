@@ -11,7 +11,7 @@ async def draw(game, bot, pseudo, channel):
         channel (str): Salon dans lequel le joueur a effectué l'action
     """
 
-    success, message = game.draw_card(pseudo)
+    success, message = game.draw_card(bot, pseudo, channel)
 
     if success:
         player = game.players[game.current_player]
@@ -27,14 +27,15 @@ async def draw(game, bot, pseudo, channel):
         hand_string = ", ".join(cards)
         drawed_card = cards[-1]
 
-        await bot.send(f"NOTICE {player.pseudo} :Tu as pioché la carte {drawed_card}. Voici ta main : {hand_string}")
+        await bot.send(f"PRIVMSG {channel} :\x02{player.pseudo} a pioché une carte ! Pourra-t-iel jouer cette fois-ci ?\x02")
+        await bot.send(f"NOTICE {player.pseudo} :\x02Tu as pioché la carte {drawed_card}. Voici ta main : {hand_string}\x02")
     else:
         match message:
             case "NOT_STARTED":
-                await bot.send(f"PRIVMSG {channel} :La partie n'a pas encore commencé.")
+                await bot.send(f"PRIVMSG {channel} :\x02La partie n'a pas encore commencé.\x02")
             case "NOT_YOUR_TURN":
-                await bot.send(f"PRIVMSG {channel} :Ce n'est pas à ton tour de jouer.")
+                await bot.send(f"PRIVMSG {channel} :\x02Ce n'est pas à ton tour de jouer.\x02")
             case "ALREADY_DRAW":
-                await bot.send(f"PRIVMSG {channel} :Tu as déjà pioché.")
+                await bot.send(f"PRIVMSG {channel} :\x02Tu as déjà pioché.\x02")
             case "MOVE_POSSIBLE":
-                await bot.send(f"PRIVMSG {channel} :Tu peux déjà jouer sans piocher de nouvelle carte.")
+                await bot.send(f"PRIVMSG {channel} :\x02Tu peux déjà jouer sans piocher de nouvelle carte.\x02")

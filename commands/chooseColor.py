@@ -20,7 +20,7 @@ async def chooseColor(game, bot, pseudo, channel, msg):
 
         player = game.players[game.current_player]
 
-        await bot.send(f"PRIVMSG {channel} :La nouvelle couleur est {color}. C'est à {player.pseudo} de jouer.")
+        await bot.send(f"PRIVMSG {channel} :\x02La nouvelle couleur est {color}. C'est à {player.pseudo} de jouer.\x02")
 
         if len(player.hand) == 1 and not player.uno: # Le joueur n'a pas dit UNO
             cards = []
@@ -31,8 +31,8 @@ async def chooseColor(game, bot, pseudo, channel, msg):
                 cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
             drawed_string = ", ".join(cards)
 
-            await bot.send(f"PRIVMSG {channel} :{player.pseudo} n'a pas dit UNO ! Tu pioche 2 cartes.")
-            await bot.send(f"NOTICE {player.pseudo} :Tu as pioché les cartes suivantes : {drawed_string}.")
+            await bot.send(f"\x02PRIVMSG {channel} :{player.pseudo} n'a pas dit UNO ! Tu pioche 2 cartes.\x02")
+            await bot.send(f"\x02NOTICE {player.pseudo} :Tu as pioché les cartes suivantes : {drawed_string}.\x02")
 
         nb_card = len(player.hand)
         cards = []
@@ -43,12 +43,12 @@ async def chooseColor(game, bot, pseudo, channel, msg):
             cards.append(card)
         hand_string = ", ".join(cards)
 
-        await bot.send(f"NOTICE {player.pseudo} :Voici ta main : {hand_string}")
+        await bot.send(f"NOTICE {player.pseudo} :\x02Voici ta main : {hand_string}\x02")
     else:
         match message:
             case "NOT_STARTED":
-                await bot.send(f"PRIVMSG {channel} :La partie n'a pas encore commencé.")
+                await bot.send(f"\x02PRIVMSG {channel} :La partie n'a pas encore commencé.\x02")
             case "NOT_YOUR_TURN":
-                await bot.send(f"PRIVMSG {channel} :Ce n'est pas à ton tour de jouer.")
+                await bot.send(f"\x02PRIVMSG {channel} :Ce n'est pas à ton tour de jouer.\x02")
             case "NOT_ASKED":
-                await bot.send(f"PRIVMSG {channel} :Ce n'est pas le moment de choisir une couleur.")
+                await bot.send(f"\x02PRIVMSG {channel} :Ce n'est pas le moment de choisir une couleur.\x02")

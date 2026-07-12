@@ -10,10 +10,10 @@ async def startGame(game, bot, channel):
         channel (str): Salon dans lequel le joueur a effectué l'action
     """
 
-    success, message = game.start_game()
+    success, message = game.start_game(bot, channel)
 
     if success:
-        await bot.send(f"PRIVMSG {channel} :La partie va commencer !")
+        await bot.send(f"PRIVMSG {channel} :\x02La partie va commencer !\x02")
 
         for p in game.players:
             hand_string = ''
@@ -26,15 +26,15 @@ async def startGame(game, bot, channel):
                 cards.append(card)
             hand_string = ", ".join(cards)
 
-            await bot.send(f"NOTICE {p.pseudo} :Voici ta main : {hand_string}")
+            await bot.send(f"NOTICE {p.pseudo} :\x02Voici ta main : {hand_string}\x02")
 
         current_card = game.current_card
         current_card = COLORS[current_card.split('_')[0]] + ' ' + current_card
-        await bot.send(f"PRIVMSG {channel} :La première carte est : {current_card}. C'est à {game.players[game.current_player].pseudo} de jouer.")
+        await bot.send(f"PRIVMSG {channel} :\x02Les cartes ont été distribuées. Si vous ne voyez pas vos cartes, regardez dans le salon #TGPIRC. La première carte est : {current_card}. C'est à {game.players[game.current_player].pseudo} de jouer.\x02")
 
     else:
         match message:
             case "ALREADY_STARTED":
-                await bot.send(f"PRIVMSG {channel} :La partie est déjà en cours.")
+                await bot.send(f"PRIVMSG {channel} :\x02La partie est déjà en cours.\x02")
             case "NOT_ENOUGH":
-                await bot.send(f"PRIVMSG {channel} :Il faut deux joueurs minimum pour lancer une partie. Taper !join pour rejoindre la partie.")
+                await bot.send(f"PRIVMSG {channel} :\x02Il faut deux joueurs minimum pour lancer une partie. Taper !join pour rejoindre la partie.\x02")

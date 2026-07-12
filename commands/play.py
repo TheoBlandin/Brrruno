@@ -20,7 +20,7 @@ async def play(game, bot, pseudo, channel, msg):
             '_')[0]] + ' ' + game.current_card
         player = game.players[game.current_player]
 
-        await bot.send(f"PRIVMSG {channel} :La nouvelle carte est {current_card}. C'est à {player.pseudo} de jouer.")
+        await bot.send(f"PRIVMSG {channel} :\x02La nouvelle carte est {current_card}. C'est à {player.pseudo} de jouer.\x02")
 
         if len(player.hand) == 1 and not player.uno: # Le joueur n'a pas dit UNO
             cards = []
@@ -31,8 +31,8 @@ async def play(game, bot, pseudo, channel, msg):
                 cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
             drawed_string = ", ".join(cards)
 
-            await bot.send(f"PRIVMSG {channel} :{player.pseudo} n'a pas dit UNO ! Tu pioche 2 cartes.")
-            await bot.send(f"NOTICE {player.pseudo} :Tu as pioché les cartes suivantes : {drawed_string}.")
+            await bot.send(f"PRIVMSG {channel} :\x02{player.pseudo} n'a pas dit UNO ! Tu pioche 2 cartes.\x02")
+            await bot.send(f"NOTICE {player.pseudo} :\x02Tu as pioché les cartes suivantes : {drawed_string}.\x02")
 
         nb_card = len(player.hand)
         cards = []
@@ -43,19 +43,19 @@ async def play(game, bot, pseudo, channel, msg):
             cards.append(card)
         hand_string = ", ".join(cards)
 
-        await bot.send(f"NOTICE {player.pseudo} :Voici ta main : {hand_string}")
+        await bot.send(f"NOTICE {player.pseudo} :\x02Voici ta main : {hand_string}\x02")
     else:
         match message:
             case "NOT_STARTED":
-                await bot.send(f"PRIVMSG {channel} :La partie n'a pas encore commencé.")
+                await bot.send(f"PRIVMSG {channel} :\x02La partie n'a pas encore commencé.\x02")
             case "NOT_YOUR_TURN":
-                await bot.send(f"PRIVMSG {channel} :Ce n'est pas à ton tour de jouer.")
+                await bot.send(f"PRIVMSG {channel} :\x02Ce n'est pas à ton tour de jouer.\x02")
             case "NO_CARD":
-                await bot.send(f"PRIVMSG {channel} :Tu n'as choisit aucune carte.")
+                await bot.send(f"PRIVMSG {channel} :\x02Tu n'as choisit aucune carte.\x02")
             case "NOT_IN_HAND":
-                await bot.send(f"PRIVMSG {channel} :Cette carte n'est pas dans ta main.")
+                await bot.send(f"PRIVMSG {channel} :\x02Cette carte n'est pas dans ta main.\x02")
             case "INVALID":
-                await bot.send(f"PRIVMSG {channel} :Ce coup est invalide.")
+                await bot.send(f"PRIVMSG {channel} :\x02Ce coup est invalide.\x02")
             case "END":
                 winners = []
                 for i in range(game.finish_order):
@@ -63,5 +63,5 @@ async def play(game, bot, pseudo, channel, msg):
                     winners.append(winner)
                 winner_string = ", ".join(winners)
 
-                await bot.send(f"PRIVMSG {channel} :La partie est terminée, voici le classement : {winner_string}")
-                await bot.send(f"PRIVMSG {channel} :Prêts pour une nouvelle partie ? Tapez !join pour rejoindre la partie !")
+                await bot.send(f"PRIVMSG {channel} :\x02La partie est terminée, voici le classement : {winner_string}\x02")
+                await bot.send(f"PRIVMSG {channel} :\x02Prêts pour une nouvelle partie ? Tapez !join pour rejoindre la partie !\x02")

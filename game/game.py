@@ -2,9 +2,11 @@ from game.deck import Deck
 from game.player import Player
 from utils.colors import COLORS
 from utils.rules import checkPossibilityAction, checkAction
+import asyncio
 
 FORBIDDEN_START = [f"joker_couleurs", f"joker_+4", f"rouge_passeTonTour", f"vert_passeTonTour", f"bleu_passeTonTour", f"jaune_passeTonTour",
                    f"rouge_changeDeSens", f"vert_changeDeSens", f"bleu_changeDeSens", f"jaune_changeDeSens", f"rouge_+2", f"vert_+2", f"bleu_+2", f"jaune_+2"]
+TURN_TIMEOUT = 20
 
 
 class Game:
@@ -19,6 +21,7 @@ class Game:
         current_card (str): Carte sur laquelle le joueur actuel doit jouer
         direction (int): Sens du jeu, avec 1 pour le sens classique et -1 pour le sens inverse
         ask_color (bool): Flag permettant de savoir si on attend que le joueur choisisse une couleur suite à une carte Joker 
+        turn_timer (asyncio.Task | None): Temps écoulé entre deux actions d'un joueur
     """
 
     def __init__(self):
@@ -36,6 +39,65 @@ class Game:
         self.direction = 1
 
         self.ask_color = False
+
+        self.turn_timer = None
+
+    async def start_timer(self, bot, channel):
+        await asyncio.sleep(TURN_TIMEOUT)
+
+        player = self.players[self.current_player]
+
+        await bot.send(f"PRIVMSG {channel} :\x02On dirait que {player.pseudo} s'est endormi-e...\x02")
+
+        await asyncio.sleep(TURN_TIMEOUT)
+
+        await bot.send(f"PRIVMSG {channel} :\x02Tant pis pour toi {player.pseudo}. Pour ta peine, tu vas piocher une carte. \x02")
+
+        new_card = self.deck.draw()
+        player.add_card(new_card)
+
+        new_card = COLORS[new_card.split('_')[0]] + ' ' + new_card
+
+        await bot.send(f"NOTICE {player.pseudo} :\x02Tu as pioché la carte {new_card}.\x02")
+
+        self.next_player() # Passer au joueur suivant
+        self.turn_timer = asyncio.create_task(self.start_timer(bot, channel)) # Démarrer un nouveau timer
+
+        player = self.players[self.current_player]
+        # Cas où le joueur précédent a passé son tour après un joker
+        if self.current_card.split('_')[1] == 'undefined':
+            color = self.current_card.split('_')[0]
+            color = COLORS[color] + ' ' + color
+
+            await bot.send(f"PRIVMSG {channel} :\x02{player.pseudo} n'as pas pu jouer à temps. C'est à {player.pseudo} de jouer. La couleur est {color}\x02")
+        else:
+            current_card = COLORS[self.current_card.split(
+                '_')[0]] + ' ' + self.current_card
+
+            await bot.send(f"PRIVMSG {channel} :\x02{player.pseudo} n'as pas pu jouer à temps. C'est à {player.pseudo} de jouer. La carte est {current_card}\x02")
+
+        if len(player.hand) == 1 and not player.uno: # Le joueur n'a pas dit UNO
+            cards = []
+            for _ in range(2):  # Piocher 2 cartes
+                new_card = self.deck.draw()
+                player.add_card(new_card)
+
+                cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
+            drawed_string = ", ".join(cards)
+
+            await bot.send(f"PRIVMSG {channel} :\x02{player.pseudo} n'a pas dit UNO ! Tu pioche 2 cartes.\x02")
+            await bot.send(f"NOTICE {player.pseudo} :\x02Tu as pioché les cartes suivantes : {drawed_string}.\x02")
+            
+        nb_card = len(player.hand)
+        cards = []
+        for i in range(nb_card):
+            card = player.hand[i]
+            # Ajouter le carré de couleur correspondant
+            card = COLORS[card.split('_')[0]] + ' ' + card
+            cards.append(card)
+        hand_string = ", ".join(cards)
+
+        await bot.send(f"NOTICE {player.pseudo} :\x02Voici ta main : {hand_string}\x02")
 
     def add_player(self, pseudo):
         """ Ajouter un joueur dans la partie
@@ -57,21 +119,16 @@ class Game:
         self.players.append(Player(pseudo))
         return (True, "OK")
 
-    def remove_player(self, pseudo, isCommand):
+    def remove_player(self, pseudo):
         """ Retirer un joueur de la partie
 
         Parameters :
             pseudo (str): Pseudo du joueur à retirer
-            isCommand (bool): Source de l'appel avec True si ça provient de la commande !quit, False sinon
 
         Returns:
             (bool): Succès du retrait du joueur
             (str): Message justificatif du succès ou de l'échec
         """
-
-        if self.started and isCommand:
-            return (False, "ALREADY_STARTED")
-
         for player in self.players:
             if player.pseudo == pseudo:
                 self.players.remove(player)
@@ -88,7 +145,7 @@ class Game:
 
         return self.players
 
-    def start_game(self):
+    def start_game(self, bot, channel):
         """ Lancer la partie
 
         Returns:
@@ -102,6 +159,7 @@ class Game:
         if len(self.players) < 2:  # Pas assez de joueurs
             return (False, "NOT_ENOUGH")
 
+        self.turn_timer = asyncio.create_task(self.start_timer(bot, channel)) # Démarrer un nouveau timer
         self.started = True
         self.deck.build()
 
@@ -133,6 +191,11 @@ class Game:
             (str): Message justificatif du succès ou de l'échec
         """
 
+        # Réinitialiser le timer
+        if self.turn_timer is not None:
+            self.turn_timer.cancel()
+        self.turn_timer = asyncio.create_task(self.start_timer(bot, channel)) # Démarrer un nouveau timer
+
         # La partie n'a pas encore commencé
         if not self.started:
             return (False, "NOT_STARTED")
@@ -163,51 +226,52 @@ class Game:
         card_color, card_symbol = card.split('_')
         if card_symbol == "changeDeSens":
             self.direction *= -1
+            await bot.send(f"PRIVMSG {channel} :\x02Attention, la roue tourne !\x02")
         elif card_symbol == "passeTonTour":
             self.next_player()  # Passer directement le tour du joueur suivant
+            await bot.send(f"PRIVMSG {channel} :\x02Désolé {self.players[self.current_player]}, mais tu ne joueras pas cette fois-ci.\x02")
         elif card_color == "joker":
             if card_symbol == "+4":  # Carte joker +4
-                # Joueur qui va piocher
-                next_player = self.players[(
-                    self.current_player + self.direction) % len(self.players)]
+                # On passe le tour du joueur qui va piocher
+                self.next_player()
+                new_player = self.players[self.current_player]
 
                 cards = []
                 for _ in range(4):  # Piocher 4 cartes
                     new_card = self.deck.draw()
-                    next_player.add_card(new_card)
+                    new_player.add_card(new_card)
 
                     cards.append(
                         COLORS[new_card.split('_')[0]] + ' ' + new_card)
 
                 drawed_string = ", ".join(cards)
 
-                await bot.send(f"PRIVMSG {channel} :Ouille, ça fait mal ! {next_player.pseudo} pioche 4 cartes.")
+                await bot.send(f"PRIVMSG {channel} :\x02Ouille, ça fait mal ! {new_player.pseudo} pioche 4 cartes.\x02")
 
-                await bot.send(f"NOTICE {next_player.pseudo} :Tu as pioché les cartes suivantes : {drawed_string}.")
+                await bot.send(f"NOTICE {new_player.pseudo} :\x02Tu as pioché les cartes suivantes : {drawed_string}.\x02")
 
             await self.asking_color(bot, channel)
             return (False, "WAIT_COLOR")
         elif card_symbol == "+2":
-            # Joueur qui va piocher
-            next_player = self.players[(
-                self.current_player + self.direction) % len(self.players)]
+           # On passe le tour du joueur qui va piocher
+            self.next_player()
+            new_player = self.players[self.current_player]
 
             cards = []
             for _ in range(2):  # Piocher 2 cartes
                 new_card = self.deck.draw()
-                next_player.add_card(new_card)
+                new_player.add_card(new_card)
 
                 cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
 
             drawed_string = ", ".join(cards)
 
-            await bot.send(f"PRIVMSG {channel} :Ouille, ça fait mal ! {next_player.pseudo} pioche 2 cartes.")
-
-            await bot.send(f"NOTICE {next_player.pseudo} :Tu as pioché les cartes suivantes :  {drawed_string}.")
+            await bot.send(f"PRIVMSG {channel} :\x02Ouille, ça fait mal ! {new_player.pseudo} pioche 2 cartes.\x02")
+            await bot.send(f"NOTICE {new_player.pseudo} :\x02Tu as pioché les cartes suivantes :  {drawed_string}.\x02")
 
         if len(player.hand) == 0:  # Le joueur n'a plus de carte en main
-            await bot.send(f"PRIVMSG {channel} :{player.pseudo} a terminé la partie, félicitations !")
-            self.remove_player(player.pseudo, False)
+            await bot.send(f"PRIVMSG {channel} :\x02{player.pseudo} a terminé, félicitations !\x02")
+            self.remove_player(player.pseudo)
             # Ajouter le joueur à la liste des gagnants
             self.finish_order.append(player.pseudo)
             if len(self.players) == 1:  # Il n'y a plus qu'un seul joueur dans la partie
@@ -218,9 +282,10 @@ class Game:
         player.draw = False  # Réinitialiser le flag de pioche du joueur
         self.current_card = card  # Mettre à jour la carte du haut du paquet
         self.next_player()  # Passer la main au joueur suivant
+        self.turn_timer = asyncio.create_task(self.start_timer(bot, channel)) # Démarrer un nouveau timer
         return (check, "OK")
 
-    def draw_card(self, pseudo):
+    def draw_card(self, bot, pseudo, channel):
         """ Gérer l'action piocher d'un joueur
 
         Parameters:
@@ -230,6 +295,11 @@ class Game:
             (bool): Succès de l'action du joueur
             (str): Message justificatif du succès ou de l'échec
         """
+
+        # Réinitialiser le timer
+        if self.turn_timer is not None:
+            self.turn_timer.cancel()
+        self.turn_timer = asyncio.create_task(self.start_timer(bot, channel)) # Démarrer un nouveau timer
 
         # La partie n'a pas encore commencé
         if not self.started:
@@ -251,7 +321,7 @@ class Game:
 
         player.add_card(self.deck.draw())
         player.draw = True
-        player.uno = False # Réinitialiser Uno
+        player.uno = False  # Réinitialiser Uno
 
         if len(self.deck.cards) == 0:  # pioche vide
             self.deck.refill()  # Recréer une pioche avec les cartes non en jeu
@@ -272,7 +342,7 @@ class Game:
             channel (str): Salon dans lequel le bot doit envoyer le message
         """
 
-        await bot.send(f"PRIVMSG {channel} :Quelle nouvelle couleur choisis-tu ?")
+        await bot.send(f"PRIVMSG {channel} :\x02Quelle nouvelle couleur choisis-tu ? (!rouge, !vert, !bleu ou !jaune)\x02")
         self.ask_color = True  # Une couleur est en attente
 
     async def choose_color(self, bot, pseudo, channel, msg):
@@ -286,6 +356,11 @@ class Game:
             (bool): Succès de l'action du joueur
             (str): Message justificatif du succès ou de l'échec
         """
+
+        # Réinitialiser le timer
+        if self.turn_timer is not None:
+            self.turn_timer.cancel()
+        self.turn_timer = asyncio.create_task(self.start_timer(bot, channel)) # Démarrer un nouveau timer
 
         # La partie n'a pas encore commencé
         if not self.started:
@@ -305,9 +380,10 @@ class Game:
         # Réinitialiser le flag de pioche du joueur
         self.players[self.current_player].draw = False
         self.next_player()  # Passer la main au joueur suivant
+        self.turn_timer = asyncio.create_task(self.start_timer(bot, channel)) # Démarrer un nouveau timer
         return (True, "OK")
 
-    def pass_turn(self, pseudo):
+    def pass_turn(self, bot, pseudo, channel):
         """ Traiter l'action Passer son tour
 
         Parameters:
@@ -317,6 +393,11 @@ class Game:
             (bool): Succès de l'action du joueur
             (str): Message justificatif du succès ou de l'échec
         """
+
+        # Réinitialiser le timer
+        if self.turn_timer is not None:
+            self.turn_timer.cancel()
+        self.turn_timer = asyncio.create_task(self.start_timer(bot, channel)) # Démarrer un nouveau timer
 
         # La partie n'a pas encore commencé
         if not self.started:
@@ -338,6 +419,7 @@ class Game:
 
         player.draw = False  # Réinitialiser le flag de pioche du joueur
         self.next_player()  # Passer la main au joueur suivant
+        self.turn_timer = asyncio.create_task(self.start_timer(bot, channel)) # Démarrer un nouveau timer
         return (True, "OK")
 
     def uno(self, pseudo):
@@ -354,16 +436,16 @@ class Game:
         # La partie n'a pas encore commencé
         if not self.started:
             return (False, "NOT_STARTED")
-        
+
         for player in self.players:
             if player.pseudo == pseudo:
                 uno_player = player
 
-        if uno_player.uno :
+        if uno_player.uno:
             return (False, "ALREADY_UNO")
 
-        if len(uno_player.hand) != 1: # Le joueur a plus d'une seule carte dans sa main
+        if len(uno_player.hand) != 1:  # Le joueur a plus d'une seule carte dans sa main
             return (False, "NO_UNO")
-        
+
         uno_player.uno = True
         return (True, "OK")
