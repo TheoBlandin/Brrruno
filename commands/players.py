@@ -7,18 +7,17 @@ async def seePlayers(game, bot, channel):
         channel (str): Salon dans lequel le joueur a effectué l'action
     """
 
-    players = game.see_players()
-    nbPlayers = len(players)
+    nbPlayers = len(game.players)
 
     if nbPlayers == 0:
-        await bot.send(f"PRIVMSG {channel} :\x02Il n'y a aucun joueur d'enregistrer.\x02")
+        await bot.send(f"PRIVMSG {channel} :\x02Il n'y a aucun joueur dans la partie.\x02")
 
     else:
         players_string = ''
         for i in range(nbPlayers):
             if i + 1 == nbPlayers:  # Dernier joueur de la liste
-                players_string += players[i].pseudo + '.'
+                players_string += game.players[i].pseudo + '.'
             else:
-                players_string += players[i].pseudo + ', '
+                players_string += game.players[i].pseudo + ', '
 
-        await bot.send(f"PRIVMSG {channel} :\x02Liste des joueurs : {players_string}\x02")
+        await bot.send(f"PRIVMSG {channel} :\x02Voici la liste des joueurs : {players_string}\x02")

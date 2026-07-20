@@ -1,4 +1,9 @@
+# Data
 from utils.colors import COLORS
+
+# Functions
+from utils.rules import checkUno
+from utils.utils import showHand
 
 
 async def passTurn(game, bot, pseudo, channel):
@@ -7,48 +12,28 @@ async def passTurn(game, bot, pseudo, channel):
     Parameters:
         game (Game): Partie de Uno
         bot (IRCClient): Bot de jeu connecté à l'IRC
-        pseudo (str): Pseudo du joueur ayant effectué l'action
-        channel (str): Salon dans lequel le joueur a effectué l'action
+        pseudo (str): Pseudo du joueur qui a passé son tour
+        channel (str): Salon dans lequel la partie se déroule
     """
 
-    success, message = game.pass_turn(bot, pseudo, channel)
+    success, message = game.pass_turn(pseudo)
 
     if success:
-        player = game.players[game.current_player]
         # Cas où le joueur précédent a passé son tour après un joker
         if game.current_card.split('_')[1] == 'undefined':
             color = game.current_card.split('_')[0]
             color = COLORS[color] + ' ' + color
 
-            await bot.send(f"PRIVMSG {channel} :\x02{pseudo} a passé son tour. C'est à {player.pseudo} de jouer. La couleur est {color}\x02")
+            await bot.send(f"PRIVMSG {channel} :\x02{pseudo} a passé son tour. C'est à {game.current_player.pseudo} de jouer. La couleur est {color}.\x02")
         else:
             current_card = COLORS[game.current_card.split(
                 '_')[0]] + ' ' + game.current_card
 
-            await bot.send(f"PRIVMSG {channel} :\x02{pseudo} a passé son tour. C'est à {player.pseudo} de jouer. La carte est {current_card}\x02")
+            await bot.send(f"PRIVMSG {channel} :\x02{pseudo} a passé son tour. C'est à {game.current_player.pseudo} de jouer. La carte est {current_card}.\x02")
 
-        if len(player.hand) == 1 and not player.uno: # Le joueur n'a pas dit UNO
-            cards = []
-            for _ in range(2):  # Piocher 2 cartes
-                new_card = game.deck.draw()
-                player.add_card(new_card)
+        await checkUno(game, game.current_player) # Vérifier le joueur devait dire Uno, et s'il l'a fait, sinon le faire piocher
 
-                cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
-            drawed_string = ", ".join(cards)
-
-            await bot.send(f"PRIVMSG {channel} :\x02{player.pseudo} n'a pas dit UNO ! Tu pioche 2 cartes.\x02")
-            await bot.send(f"NOTICE {player.pseudo} :\x02Tu as pioché les cartes suivantes : {drawed_string}.\x02")
-            
-        nb_card = len(player.hand)
-        cards = []
-        for i in range(nb_card):
-            card = player.hand[i]
-            # Ajouter le carré de couleur correspondant
-            card = COLORS[card.split('_')[0]] + ' ' + card
-            cards.append(card)
-        hand_string = ", ".join(cards)
-
-        await bot.send(f"NOTICE {player.pseudo} :\x02Voici ta main : {hand_string}\x02")
+        await showHand(game, game.current_player) # Donner sa main au joueur dont c'est le tour
     else:
         match message:
             case "NOT_STARTED":

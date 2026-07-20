@@ -1,5 +1,8 @@
+# Data
 from utils.colors import COLORS
 
+# Functions
+from utils.utils import showHand
 
 async def draw(game, bot, pseudo, channel):
     """ Traiter la réponse du bot à l'action Piocher une carte
@@ -7,28 +10,20 @@ async def draw(game, bot, pseudo, channel):
     Parameters:
         game (Game): Partie de Uno
         bot (IRCClient): Bot de jeu connecté à l'IRC
-        pseudo (str): Pseudo du joueur ayant effectué l'action
-        channel (str): Salon dans lequel le joueur a effectué l'action
+        pseudo (str): Pseudo du joueur qui a pioché une carte
+        channel (str): Salon dans lequel la partie se déroule
     """
 
-    success, message = game.draw_card(bot, pseudo, channel)
+    success, message = game.draw_card(pseudo)
 
     if success:
-        player = game.players[game.current_player]
-        nb_card = len(player.hand)
+        await bot.send(f"PRIVMSG {channel} :\x02{game.current_player.pseudo} a pioché une carte ! Pourra-t-iel jouer cette fois-ci ?\x02")
+ 
+        drawed_card = game.current_player.hand[-1]
+        drawed_card = COLORS[drawed_card.split('_')[0]] + ' ' + drawed_card
+        await bot.send(f"NOTICE {game.current_player.pseudo} :\x02Tu as pioché la carte {drawed_card}.\x02")
 
-        cards = []
-        drawed_card = ''
-        for i in range(nb_card):
-            card = player.hand[i]
-            # Ajouter le carré de couleur correspondant
-            card = COLORS[card.split('_')[0]] + ' ' + card
-            cards.append(card)
-        hand_string = ", ".join(cards)
-        drawed_card = cards[-1]
-
-        await bot.send(f"PRIVMSG {channel} :\x02{player.pseudo} a pioché une carte ! Pourra-t-iel jouer cette fois-ci ?\x02")
-        await bot.send(f"NOTICE {player.pseudo} :\x02Tu as pioché la carte {drawed_card}. Voici ta main : {hand_string}\x02")
+        await showHand(game, game.current_player) # Donner sa main au joueur 
     else:
         match message:
             case "NOT_STARTED":

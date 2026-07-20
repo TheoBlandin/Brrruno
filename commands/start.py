@@ -1,5 +1,8 @@
+# Data
 from utils.colors import COLORS
 
+# Functions
+from utils.utils import showHand
 
 async def startGame(game, bot, channel):
     """ Traiter la réponse du bot à l'action Lancer la partie
@@ -7,7 +10,7 @@ async def startGame(game, bot, channel):
     Parameters:
         game (Game): Partie de Uno 
         bot (IRCClient): Bot de jeu connecté à l'IRC
-        channel (str): Salon dans lequel le joueur a effectué l'action
+        channel (str): Salon dans lequel la partie se déroule
     """
 
     success, message = game.start_game(bot, channel)
@@ -16,21 +19,13 @@ async def startGame(game, bot, channel):
         await bot.send(f"PRIVMSG {channel} :\x02La partie va commencer !\x02")
 
         for p in game.players:
-            hand_string = ''
-
-            cards = []
-            for i in range(7):
-                card = p.hand[i]
-                # Ajouter le carré de couleur correspondant
-                card = COLORS[card.split('_')[0]] + ' ' + card
-                cards.append(card)
-            hand_string = ", ".join(cards)
-
-            await bot.send(f"NOTICE {p.pseudo} :\x02Voici ta main : {hand_string}\x02")
-
+            await showHand(game, p) # Donner sa main au joueur 
+    
         current_card = game.current_card
         current_card = COLORS[current_card.split('_')[0]] + ' ' + current_card
-        await bot.send(f"PRIVMSG {channel} :\x02Les cartes ont été distribuées. Si vous ne voyez pas vos cartes, regardez dans le salon #TGPIRC. La première carte est : {current_card}. C'est à {game.players[game.current_player].pseudo} de jouer.\x02")
+
+        await bot.send(f"PRIVMSG {channel} :\x02Les cartes ont été distribuées. Si vous ne voyez pas vos cartes, regardez dans le salon #TGPIRC.\x02")
+        await bot.send(f"PRIVMSG {channel} :\x02La première carte est : {current_card}. C'est à {game.current_player.pseudo} de jouer.\x02")
 
     else:
         match message:

@@ -1,4 +1,6 @@
 # Vérifier que le coup est possible
+from utils.colors import COLORS
+
 def checkAction(game, player_card):
     """ Vérifie si le coup est possible.
 
@@ -38,3 +40,23 @@ def checkPossibilityAction(game, player_hand):
         i += 1
 
     return flag
+
+async def checkUno(game, player):
+    """ Vérifier si le joueur devait dire Uno, et le faire piocher s'il ne l'a pas dit
+
+    Parameters:
+        game (Game): Partie de Uno
+        player (Player): Objet Player dont c'est le tour
+    """
+
+    if len(player.hand) == 1 and not player.uno: # Le joueur n'a pas dit UNO
+        cards = []
+        for _ in range(2):  # Piocher 2 cartes
+            new_card = game.deck.draw()
+            player.add_card(new_card)
+
+            cards.append(COLORS[new_card.split('_')[0]] + ' ' + new_card)
+        drawed_string = ", ".join(cards)
+
+        await game.bot.send(f"PRIVMSG {game.channel} :\x02{player.pseudo} n'a pas dit UNO ! Tu pioches 2 cartes.\x02")
+        await game.bot.send(f"NOTICE {player.pseudo} :\x02Tu as pioché les cartes suivantes : {drawed_string}.\x02")

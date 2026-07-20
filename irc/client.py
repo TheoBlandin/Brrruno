@@ -10,7 +10,6 @@ from commands.players import seePlayers
 from commands.start import startGame
 from commands.play import play
 from commands.draw import draw
-from commands.chooseColor import chooseColor
 from commands.passTurn import passTurn
 from commands.uno import uno
 
@@ -137,7 +136,7 @@ class IRCClient:
                         await seePlayers(self.game, self, channel)
                     case "!start":  # Lancer la partie
                         await startGame(self.game, self, channel)
-                    case c if c.startswith("!play"):  # Jouer une carte
+                    case c if c.startswith("!play "):  # Jouer une carte
                         await play(self.game, self, user, channel, msg)
                     case "!draw":  # Piocher une carte
                         await draw(self.game, self, user, channel)

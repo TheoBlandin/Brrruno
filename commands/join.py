@@ -4,8 +4,8 @@ async def joinGame(game, bot, pseudo, channel):
     Parameters:
         game (Game): Partie de Uno
         bot (IRCClient): Bot de jeu connecté à l'IRC
-        pseudo (str): Pseudo du joueur ayant effectué l'action
-        channel (str): Salon dans lequel le joueur a effectué l'action
+        pseudo (str): Pseudo du joueur qui rejoint la partie
+        channel (str): Salon dans lequel la partie se déroule
     """
 
     success, message = game.add_player(pseudo)
