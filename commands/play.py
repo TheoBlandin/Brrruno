@@ -15,7 +15,7 @@ async def play(game, bot, pseudo, channel, msg):
 
     success, message = await game.play(bot, pseudo, channel, msg)
 
-    if success:
+    if success and message != "COULEUR":
         current_card = COLORS[game.current_card.split(
             '_')[0]] + ' ' + game.current_card
         player = game.players[game.current_player]
@@ -58,7 +58,7 @@ async def play(game, bot, pseudo, channel, msg):
                 await bot.send(f"PRIVMSG {channel} :\x02Ce coup est invalide.\x02")
             case "END":
                 winners = []
-                for i in range(game.finish_order):
+                for i in range(len(game.finish_order)):
                     winner = WINNERS[i] if i < 3 else '' + game.finish_order[i]
                     winners.append(winner)
                 winner_string = ", ".join(winners)

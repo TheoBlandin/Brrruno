@@ -47,8 +47,8 @@ async def chooseColor(game, bot, pseudo, channel, msg):
     else:
         match message:
             case "NOT_STARTED":
-                await bot.send(f"\x02PRIVMSG {channel} :La partie n'a pas encore commencé.\x02")
+                await bot.send(f"PRIVMSG {channel} :\x02La partie n'a pas encore commencé.\x02")
             case "NOT_YOUR_TURN":
-                await bot.send(f"\x02PRIVMSG {channel} :Ce n'est pas à ton tour de jouer.\x02")
+                await bot.send(f"PRIVMSG {channel} :\x02Ce n'est pas à ton tour de jouer.\x02")
             case "NOT_ASKED":
-                await bot.send(f"\x02PRIVMSG {channel} :Ce n'est pas le moment de choisir une couleur.\x02")
+                await bot.send(f"PRIVMSG {channel} :\x02Ce n'est pas le moment de choisir une couleur.\x02")

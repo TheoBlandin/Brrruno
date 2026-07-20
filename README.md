@@ -2,11 +2,7 @@
 Bot IRC pour jouer au Uno
 
 ## Configuration
-À la racine du projet, créer un fichier .env avec ces variables :
-``` py
-SERVER = "test.example.fr" # URL de votre serveur IRC
-CHANNELS = "#channel_1","#channel_2" # Noms des channels à rejoindre, sans espace entre les virgules
-```
+À la racine du projet, renommer le fichier *.env.example* en *.env*, puis modifier les variables pour correspondre à votre cas d'usage.
 
 ## Commandes
 **!join** : Rejoindre la partie
@@ -17,12 +13,10 @@ CHANNELS = "#channel_1","#channel_2" # Noms des channels à rejoindre, sans espa
 
 **!start** : Lancer la partie
 
-**!play <card>** : Jouer une carte
+**!play <card> <option>** : Jouer une carte, où option est la couleur choisit pour une carte Joker
 
 **!draw** : Piocher une carte
 
 **!pass** : Passer son tour
-
-**!rouge** ou **!vert** ou **!bleu** ou **!jaune** : Choisir une couleur suite à une carte Joker
 
 **!uno** : Crier UNO

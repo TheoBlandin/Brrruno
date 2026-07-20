@@ -141,9 +141,6 @@ class IRCClient:
                         await play(self.game, self, user, channel, msg)
                     case "!draw":  # Piocher une carte
                         await draw(self.game, self, user, channel)
-                    # Choisir une couleur en cas de carte Joker
-                    case c if c in ["!rouge", "!vert", "!bleu", "!jaune"]:
-                        await chooseColor(self.game, self, user, channel, msg)
                     case "!pass":  # Passer ton tour
                         await passTurn(self.game, self, user, channel)
                     case "!uno":  # Crier UNO
