@@ -7,15 +7,13 @@ from irc.parser import parse_privmsg
 from commands.join import joinGame
 from commands.quit import quitGame
 from commands.players import seePlayers
-from commands.start import startGame
 from commands.play import play
 from commands.draw import draw
-from commands.passTurn import passTurn
 from commands.uno import uno
 
 
 class IRCClient:
-    """ Bot à connecter à l'IRC 
+    """Bot à connecter à l'IRC
 
     Attributes:
         server (str): Lien du serveur IRC auquel le bot doit se connecter
@@ -25,11 +23,11 @@ class IRCClient:
         realname (str): Vrai nom du bot
         game (Game): Partie de Uno gérée par le bot
         reader (asyncio.StreamReader | None): Stream permettant de lire les messages envoyés sur le serveur IRC
-        writer (asyncio.StreamWriter | None): Stream permettant d'écrire sur le serveur IRC  
+        writer (asyncio.StreamWriter | None): Stream permettant d'écrire sur le serveur IRC
     """
 
     def __init__(self, server, port, nick, username, realname, game):
-        """ Initialiser le bot
+        """Initialiser le bot
 
         Parameters:
             server (str): Lien du serveur IRC auquel le bot doit se connecter
@@ -52,12 +50,9 @@ class IRCClient:
         self.writer = None
 
     async def connect(self):
-        """ Connection au serveur IRC """
+        """Connection au serveur IRC"""
 
-        self.reader, self.writer = await asyncio.open_connection(
-            self.server,
-            self.port
-        )
+        self.reader, self.writer = await asyncio.open_connection(self.server, self.port)
 
         await self.send(f"NICK {self.nick}")
         await self.send(f"USER {self.username} 0 * :{self.realname}")
@@ -74,7 +69,7 @@ class IRCClient:
             print("Erreur arrêt bot:", e)
 
     async def send(self, message):
-        """ Écrire un message sur le serveur IRC
+        """Écrire un message sur le serveur IRC
 
         Parameters:
             message (str): Message à écrire
@@ -84,7 +79,7 @@ class IRCClient:
         await self.writer.drain()
 
     async def recv(self):
-        """ Recevoir un message depuis le serveur IRC 
+        """Recevoir un message depuis le serveur IRC
 
         Returns:
             (str): Message lu sur le serveur IRC
@@ -99,7 +94,7 @@ class IRCClient:
         return line.decode(errors="ignore").strip()
 
     async def loop(self):
-        """ Boucle d'actions du bot """
+        """Boucle d'actions du bot"""
 
         registered = False
         self.running = True
@@ -118,9 +113,11 @@ class IRCClient:
                 # Quitter l'accueil auto-join par défaut
                 await self.send(f"PART #accueil")
 
-                for channel in config.CHANNELS:
-                    await self.send(f"JOIN {channel}")
-                    await self.send(f"PRIVMSG {channel} :Prêts pour une partie de Uno ? Tapez !join pour rejoindre la partie")
+                await self.send(f"JOIN {config.CHANNEL}")
+                await self.send(
+                    f"PRIVMSG {config.CHANNEL} :\x02Prêts pour une nouvelle partie ? Tapez !go pour rejoindre la partie !\x02"
+                )
+                self.game.build(self, config.CHANNEL)
 
             # Gestion des commandes
             parsed = parse_privmsg(message)
@@ -128,19 +125,15 @@ class IRCClient:
                 user, channel, msg = parsed
 
                 match msg.lower():
-                    case "!join":  # Rejoindre la partie
+                    case "!go":  # Rejoindre la partie
                         await joinGame(self.game, self, user, channel)
                     case "!quit":  # Quitter la partie
                         await quitGame(self.game, self, user, channel)
-                    case "!players":  # Voir la liste des joueurs
+                    case "!joueurs":  # Voir la liste des joueurs
                         await seePlayers(self.game, self, channel)
-                    case "!start":  # Lancer la partie
-                        await startGame(self.game, self, channel)
-                    case c if c.startswith("!play "):  # Jouer une carte
+                    case c if c.startswith("!jouer ") or c.startswith("!j "):  # Jouer une carte
                         await play(self.game, self, user, channel, msg)
-                    case "!draw":  # Piocher une carte
+                    case "!pioche":  # Piocher une carte
                         await draw(self.game, self, user, channel)
-                    case "!pass":  # Passer ton tour
-                        await passTurn(self.game, self, user, channel)
                     case "!uno":  # Crier UNO
                         await uno(self.game, self, user, channel)

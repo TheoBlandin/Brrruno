@@ -29,6 +29,7 @@ FORBIDDEN_START = [
     f"jaune_+2",
 ]
 TURN_TIMEOUT = 30
+START_TIMEOUT = 120
 
 
 class Game:
@@ -44,7 +45,8 @@ class Game:
         finish_order (str[]): Pseudo des gagnants, par ordre du plus rapide
         current_card (str): Carte sur laquelle le joueur actuel doit jouer
         direction (int): Sens du jeu, avec 1 pour le sens classique et -1 pour le sens inverse
-        turn_timer (asyncio.Task | None): Temps écoulé entre deux actions d'un joueur
+        starting_timer (asyncio.Task | None): Timer avant lequel la partie va commencer
+        turn_timer (asyncio.Task | None): Gestion du temps pour le tour d'un joueur, limité à 60sec
     """
 
     def __init__(self):
@@ -63,7 +65,14 @@ class Game:
 
         self.direction = 1
 
-        self.turn_timer = None
+        self.starting_timer = None  # Timer pour lancer la partie
+        self.turn_timer = None  # Timer pour un tour
+
+    def build(self, bot, channel):
+        """Initialiser les données relatives à l'IRC"""
+
+        self.bot = bot
+        self.channel = channel
 
     def add_player(self, pseudo):
         """Ajouter un joueur dans la partie
@@ -83,6 +92,12 @@ class Game:
             return (False, "ALREADY_IN")
 
         self.players.append(Player(pseudo))
+
+        if len(self.players) == 2:
+            self.restart_starting_timer()
+        elif len(self.players) < 2:
+            self.starting_timer = None
+
         return (True, "OK")
 
     def remove_player(self, pseudo):
@@ -114,6 +129,11 @@ class Game:
                         self.started = False  # Fin de la partie
                         return (True, "END")
                 self.players.remove(player)
+
+                if len(self.players) < 2:
+                    self.starting_timer = (
+                        None  # Annuler le timer en cours pour le lancement de la partie
+                    )
                 return (True, "OK")
 
         return (False, "NOT_IN")
@@ -131,10 +151,39 @@ class Game:
 
         self.next_player()  # Passer au joueur suivant
 
-        self.restart_timer()  # Démarrer un nouveau timer
+        self.restart_turn_timer()  # Démarrer un nouveau timer
 
-    async def start_timer(self):
-        """Lance le timer"""
+    async def start_starting_timer(self):
+        """Lancer le timer de lancement d'une partie"""
+
+        try:
+            await self.bot.send(
+                f"PRIVMSG {self.channel} :\x02La partie va commencer dans 2 minutes. Tapez !joueurs pour voir la liste des joueurs, et !go pour rejoindre la partie.\x02"
+            )
+
+            await asyncio.sleep(START_TIMEOUT - 15)
+
+            # Dernière chance
+            await self.bot.send(
+                f"PRIVMSG {self.channel} :\x02Attention, il ne reste plus que 15 secondes pour rejoindre la partie ! Tapez !joueurs pour voir la liste des joueurs, et !go pour rejoindre la partie.\x02"
+            )
+
+            await asyncio.sleep(15)
+            await self.start_game()  # Lancer la partie
+
+        except asyncio.CancelledError:
+            return
+
+    def restart_starting_timer(self):
+        """Réinitialiser le timer de lancement d'une partie"""
+
+        if self.starting_timer is not None and not self.starting_timer.done():
+            self.starting_timer.cancel()
+
+        self.starting_timer = asyncio.create_task(self.start_starting_timer())
+
+    async def start_turn_timer(self):
+        """Lancer le timer d'un tour"""
 
         try:
             # Premier délai
@@ -190,35 +239,24 @@ class Game:
         except asyncio.CancelledError:
             return
 
-    def restart_timer(self):
+    def restart_turn_timer(self):
         """Réinitialiser le timer"""
 
         if self.turn_timer is not None and not self.turn_timer.done():
             self.turn_timer.cancel()
 
-        self.turn_timer = asyncio.create_task(self.start_timer())
+        self.turn_timer = asyncio.create_task(self.start_turn_timer())
 
-    def start_game(self, bot, channel):
+    async def start_game(self):
         """Lancer la partie
 
         Parameters :
             bot (IRCClient): Bot de jeu connecté à l'IRC
             channel (str): Salon dans lequel la partie se déroule
-
-        Returns:
-            (bool): Succès du lancement de la partie
-            (str): Message justificatif du succès ou de l'échec
         """
 
-        if self.started:  # Partie déjà en cours
-            return (False, "ALREADY_STARTED")
-
-        if len(self.players) < 2:  # Pas assez de joueurs
-            return (False, "NOT_ENOUGH")
-
+        self.starting_timer = None  # Annuler le timer
         self.started = True
-        self.bot = bot
-        self.channel = channel
         self.deck.build()
 
         # Distribuer 7 cartes par joueur
@@ -233,9 +271,23 @@ class Game:
             self.deck.add(self.current_card)
             self.current_card = self.deck.draw()
 
-        self.restart_timer()  # Démarrer un nouveau timer
+        self.restart_turn_timer()  # Démarrer un nouveau timer
         self.current_player = self.players[0]  # Premier joueur à jouer
-        return (True, "OK")
+
+        await self.bot.send(f"PRIVMSG {self.channel} :\x02La partie va commencer !\x02")
+
+        for p in self.players:
+            await showHand(self, p)  # Donner sa main au joueur
+
+        current_card = self.current_card
+        current_card = COLORS[current_card.split("_")[0]] + " " + current_card
+
+        await self.bot.send(
+            f"PRIVMSG {self.channel} :\x02Les cartes ont été distribuées. Si vous ne voyez pas vos cartes, regardez dans le salon #TGPIRC.\x02"
+        )
+        await self.bot.send(
+            f"PRIVMSG {self.channel} :\x02La première carte est : {current_card}. C'est à {self.current_player.pseudo} de jouer.\x02"
+        )
 
     async def play(self, pseudo, msg):
         """Traiter l'action Jouer une carte
@@ -261,12 +313,19 @@ class Game:
         parts = msg.split()
         # Aucune carte sélectionnée
         if len(parts) < 2:
-            return False, "NO_CARD"
+            return (False, "NO_CARD")
 
         # Le joueur ne possède pas cette carte dans sa main
         card = parts[1]
-        if card not in player.hand:
+        lower_hand = [
+            card.lower() for card in player.hand
+        ]  # Vérification insensible à la casse
+        if card.lower() not in lower_hand:
             return (False, "NOT_IN_HAND")
+
+        card = player.hand[
+            lower_hand.index(card)
+        ]  # Retrouver le bon formattage de la carte, sensible à la casse
 
         # Vérifier la possibilité d'une action en fonction des règles
         check = checkAction(self, card)
@@ -288,13 +347,13 @@ class Game:
                 f"PRIVMSG {self.channel} :\x02Attention, la roue tourne !\x02"
             )
         elif card_symbol == "passeTonTour":
-            self.next_player()  # Passer directement le tour du joueur suivant
+            self.next_turn()  # Passer directement le tour du joueur suivant
             await self.bot.send(
                 f"PRIVMSG {self.channel} :\x02Désolé {player.pseudo}, mais tu ne joueras pas cette fois-ci.\x02"
             )
         elif card_color == "joker":
             if card_symbol == "+4":  # Carte joker +4
-                self.next_player()  # Joueur qui va piocher
+                self.next_turn()  # Joueur qui va piocher
 
                 cards = []
                 for _ in range(4):  # Piocher 4 cartes
@@ -315,11 +374,10 @@ class Game:
             card = (
                 parts[2] + "_undefined"
             )  # Construction d'une fasse carte pour la couleur
-            self.next_turn()
 
         elif card_symbol == "+2":
             # On passe le tour du joueur qui va piocher
-            self.next_player()
+            self.next_turn()
 
             cards = []
             for _ in range(2):  # Piocher 2 cartes
@@ -347,8 +405,8 @@ class Game:
             self.finish_order.append(self.current_player.pseudo)
             if len(self.players) == 1:  # Il n'y a plus qu'un seul joueur dans la partie
                 self.started = False  # Fin de la partie
-                self.players = [] # Réinitialisation du tableau des joueurs
-                self.turn_time = None # Annulation du timer
+                self.players = []  # Réinitialisation du tableau des joueurs
+                self.turn_time = None  # Annulation du timer
                 return (False, "END")
 
         self.current_card = card  # Mettre à jour la carte du haut du paquet
@@ -382,45 +440,22 @@ class Game:
         if checkPossibilityAction(self, self.current_player.hand):
             return (False, "MOVE_POSSIBLE")
 
-        self.current_player.add_card(self.deck.draw())
+        new_card = self.deck.draw()
+        self.current_player.add_card(new_card)
         self.current_player.draw = True
         self.current_player.uno = False  # Réinitialiser Uno
 
         if len(self.deck.cards) == 0:  # Pioche vide
             self.deck.refill()  # Recréer une pioche avec les cartes non en jeu
 
-        self.restart_timer()
-        return (True, "OK")
+        # Le joueur peut jouer
+        if checkAction(self, new_card):
+            self.restart_turn_timer()
+            return (True, "OK")
 
-    def pass_turn(self, pseudo):
-        """Traiter l'action Passer son tour
-
-        Parameters:
-            pseudo (string): Pseudo du joueur qui a effectué l'action
-
-        Returns:
-            (bool): Succès de l'action du joueur
-            (str): Message justificatif du succès ou de l'échec
-        """
-
-        # La partie n'a pas encore commencé
-        if not self.started:
-            return (False, "NOT_STARTED")
-
-        # Ce n'est pas à ce joueur de jouer
-        if self.current_player.pseudo != pseudo:
-            return (False, "NOT_YOUR_TURN")
-
-        # Le joueur peut jouer sans passer son tour
-        if checkPossibilityAction(self, self.current_player.hand):
-            return (False, "MOVE_POSSIBLE")
-
-        # Le joueur n'a pas encore essayé de piocher
-        if not self.current_player.draw:
-            return (False, "DRAW_POSSIBLE")
-
+        # Le joueur ne peut pas jouer, on passe son tour
         self.next_turn()
-        return (True, "OK")
+        return (True, "PASS")
 
     def uno(self, pseudo):
         """Traiter l'action Crier UNO

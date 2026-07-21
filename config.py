@@ -12,4 +12,4 @@ NICK = "BrrrUno"
 USERNAME = "BrrrUno"
 REALNAME = "bot-uno"
 
-CHANNELS = os.getenv("CHANNELS", "").split(",")
+CHANNEL = os.getenv("CHANNEL")
