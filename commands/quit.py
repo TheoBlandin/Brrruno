@@ -7,14 +7,12 @@ from utils.utils import showHand
 from utils.winners import WINNERS
 
 
-async def quitGame(game, bot, pseudo, channel):
+async def quitGame(game, pseudo):
     """Traiter la réponse du bot à l'action Quitter la partie
 
     Parameters:
         game (Game): Partie de Uno
-        bot (IRCClient): Bot de jeu connecté à l'IRC
         pseudo (str): Pseudo du joueur ayant effectué l'action
-        channel (str): Salon dans lequel le joueur a effectué l'action
     """
 
     success, message = game.remove_player(pseudo)
@@ -22,12 +20,12 @@ async def quitGame(game, bot, pseudo, channel):
     if success:
         match message:
             case "OK":
-                await bot.send(
-                    f"PRIVMSG {channel} :\x02{pseudo} a quitté la partie.\x02"
+                await game.bot.send(
+                    f"PRIVMSG {game.channel} :\x02{pseudo} a quitté la partie.\x02"
                 )
             case "NEXT_PLAYER":
-                await bot.send(
-                    f"PRIVMSG {channel} :\x02On dirait que {pseudo} a fuit face à l'adversité et a quitté la partie...\x02"
+                await game.bot.send(
+                    f"PRIVMSG {game.channel} :\x02On dirait que {pseudo} a fuit face à l'adversité et a quitté la partie...\x02"
                 )
 
                 # Cas où le joueur précédent est parti après un joker
@@ -35,8 +33,8 @@ async def quitGame(game, bot, pseudo, channel):
                     color = game.current_card.split("_")[0]
                     color = COLORS[color] + " " + color
 
-                    await bot.send(
-                        f"PRIVMSG {channel} :\x02{pseudo} a passé son tour. C'est à {game.current_player.pseudo} de jouer. La couleur est {color}.\x02"
+                    await game.bot.send(
+                        f"PRIVMSG {game.channel} :\x02{pseudo} a passé son tour. C'est à {game.current_player.pseudo} de jouer. La couleur est {color}.\x02"
                     )
                 else:
                     current_card = (
@@ -45,8 +43,8 @@ async def quitGame(game, bot, pseudo, channel):
                         + game.current_card
                     )
 
-                    await bot.send(
-                        f"PRIVMSG {channel} :\x02{pseudo} a passé son tour. C'est à {game.current_player.pseudo} de jouer. La carte est {current_card}.\x02"
+                    await game.bot.send(
+                        f"PRIVMSG {game.channel} :\x02{pseudo} a passé son tour. C'est à {game.current_player.pseudo} de jouer. La carte est {current_card}.\x02"
                     )
 
                 await checkUno(
@@ -63,15 +61,15 @@ async def quitGame(game, bot, pseudo, channel):
                     winners.append(winner)
                 winner_string = ", ".join(winners)
 
-                await bot.send(
-                    f"PRIVMSG {channel} :\x02La partie est terminée, voici le classement : {winner_string}\x02"
+                await game.bot.send(
+                    f"PRIVMSG {game.channel} :\x02La partie est terminée, voici le classement : {winner_string}\x02"
                 )
-                await bot.send(
-                    f"PRIVMSG {channel} :\x02Prêts pour une nouvelle partie ? Tapez !go pour rejoindre la partie !\x02"
+                await game.bot.send(
+                    f"PRIVMSG {game.channel} :\x02Prêts pour une nouvelle partie ? Tapez !go pour rejoindre la partie !\x02"
                 )
     else:
         match message:
             case "NOT_IN":
-                await bot.send(
-                    f"PRIVMSG {channel} :\x02Tu n'es pas enregistré comme joueur.\x02"
+                await game.bot.send(
+                    f"PRIVMSG {game.channel} :\x02Tu n'es pas enregistré comme joueur.\x02"
                 )

@@ -1,20 +1,18 @@
-async def joinGame(game, bot, pseudo, channel):
+async def joinGame(game, pseudo):
     """ Traiter la réponse du bot à l'action Rejoindre la partie
 
     Parameters:
         game (Game): Partie de Uno
-        bot (IRCClient): Bot de jeu connecté à l'IRC
         pseudo (str): Pseudo du joueur qui rejoint la partie
-        channel (str): Salon dans lequel la partie se déroule
     """
 
     success, message = game.add_player(pseudo)
 
     if success:
-        await bot.send(f"PRIVMSG {channel} :\x02{pseudo} a rejoint la partie.\x02")
+        await game.bot.send(f"PRIVMSG {game.channel} :\x02{pseudo} a rejoint la partie.\x02")
     else:
         match message:
             case "ALREADY_STARTED":
-                await bot.send(f"PRIVMSG {channel} :\x02La partie est déjà en cours.\x02")
+                await game.bot.send(f"PRIVMSG {game.channel} :\x02La partie est déjà en cours.\x02")
             case "ALREADY_IN":
-                await bot.send(f"PRIVMSG {channel} :\x02Tu es déjà dans la partie.\x02")
+                await game.bot.send(f"PRIVMSG {game.channel} :\x02Tu es déjà dans la partie.\x02")

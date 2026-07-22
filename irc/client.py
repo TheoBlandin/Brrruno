@@ -1,5 +1,6 @@
 import asyncio
 
+from commands import seeCommands
 import config
 
 from irc.parser import parse_privmsg
@@ -126,14 +127,16 @@ class IRCClient:
 
                 match msg.lower():
                     case "!go":  # Rejoindre la partie
-                        await joinGame(self.game, self, user, channel)
+                        await joinGame(self.game, user)
                     case "!quit":  # Quitter la partie
-                        await quitGame(self.game, self, user, channel)
+                        await quitGame(self.game, user)
                     case "!joueurs":  # Voir la liste des joueurs
-                        await seePlayers(self.game, self, channel)
+                        await seePlayers(self.game, self)
                     case c if c.startswith("!jouer ") or c.startswith("!j "):  # Jouer une carte
-                        await play(self.game, self, user, channel, msg)
-                    case "!pioche":  # Piocher une carte
-                        await draw(self.game, self, user, channel)
+                        await play(self.game, user, msg)
+                    case c if c == "!pioche" or c == "!p":  # Piocher une carte
+                        await draw(self.game, user)
                     case "!uno":  # Crier UNO
-                        await uno(self.game, self, user, channel)
+                        await uno(self.game, user)
+                    case "!help": # Aide de jeu
+                        await seeCommands(self, user)
