@@ -48,6 +48,7 @@ class Game:
         current_card (str): Carte sur laquelle le joueur actuel doit jouer
         direction (int): Sens du jeu, avec 1 pour le sens classique et -1 pour le sens inverse
         waiting_for_color (bool): Flag d'attente d'une couleur après une carte Joker
+        is_joker4 (bool): Flag de l'utilisation d'un Joker +4 pour passer le tour du joueur suivant
         starting_timer (asyncio.Task | None): Timer avant lequel la partie va commencer
         turn_timer (asyncio.Task | None): Gestion du temps pour le tour d'un joueur, limité à 60sec
     """
@@ -68,6 +69,7 @@ class Game:
         self.direction = 1
 
         self.waiting_for_color = False
+        self.is_joker4 = False
 
         self.starting_timer = None  # Timer pour lancer la partie
         self.turn_timer = None  # Timer pour un tour
@@ -334,7 +336,7 @@ class Game:
             return (False, "NOT_IN_HAND")
 
         card = player.hand[
-            lower_hand.index(card)
+            lower_hand.index(card.lower())
         ]  # Retrouver le bon formattage de la carte, sensible à la casse
 
         # Vérifier la possibilité d'une action en fonction des règles
@@ -354,10 +356,11 @@ class Game:
         elif card_symbol == "passeTonTour":
             self.next_turn()  # Passer directement le tour du joueur suivant
             await self.bot.send(
-                f"PRIVMSG {self.channel} :\x02Désolé {player.pseudo}, mais tu ne joueras pas cette fois-ci.\x02"
+                f"PRIVMSG {self.channel} :\x02Désolé {self.current_player.pseudo}, mais tu ne joueras pas cette fois-ci.\x02"
             )
         elif card_color == "joker":        
             if card_symbol == "+4":  # Carte joker +4
+                self.is_joker4 = True
                 # Joueur qui va piocher
                 old_index = self.players.index(self.current_player)
                 new_index = (old_index + self.direction) % len(self.players)
@@ -506,5 +509,8 @@ class Game:
         chosen_color = color.replace('!', '')
         self.current_card = chosen_color + "_undefined" # Construction d'une fausse carte pour la couleur
         self.waiting_for_color = False
+        if self.is_joker4 : 
+            self.next_turn()
+            self.is_joker4 = False
         self.next_turn()
         return (True, "OK")

@@ -1,7 +1,5 @@
 import asyncio
 
-from commands import seeCommands
-from commands.chooseColor import chooseColor
 import config
 
 from irc.parser import parse_privmsg
@@ -12,7 +10,8 @@ from commands.players import seePlayers
 from commands.play import play
 from commands.draw import draw
 from commands.uno import uno
-
+from commands.seeCommands import seeCommands
+from commands.chooseColor import chooseColor
 
 class IRCClient:
     """Bot à connecter à l'IRC
@@ -142,4 +141,4 @@ class IRCClient:
                     case "!uno":  # Crier UNO
                         await uno(self.game, user)
                     case "!help": # Aide de jeu
-                        await seeCommands(self, user)
+                        await seeCommands(self.game, user)
