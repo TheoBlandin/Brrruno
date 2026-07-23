@@ -11,8 +11,10 @@ Bot IRC pour jouer au Uno
 
 **!joueurs** : Liste des joueurs
 
-**!jouer \<carte> \<option>** ou **!j \<carte> \<option>** : Jouer une carte, où option est la couleur choisit pour une carte Joker
+**!jouer \<carte>** ou **!j \<carte>** : Jouer une carte
 
-**!pioche** : Piocher une carte
+**!pioche ou !p** : Piocher une carte
+
+**!rouge** ou **!vert** ou **!bleu** ou **!jaune** : Choisir une couleur suite à une carte Joker
 
 **!uno** : Crier UNO

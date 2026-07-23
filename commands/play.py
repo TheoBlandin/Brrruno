@@ -20,30 +20,38 @@ async def play(game, pseudo, msg):
 
     # Si une carte Joker a été joué, la gestion se fait dans l'objet Game directement
     if success:
-        # Cas où le joueur précédent a joué une carte joker
-        if game.current_card.split("_")[1] == "undefined":
-            color = game.current_card.split("_")[0]
-            color = COLORS[color] + " " + color
+        match message:
+            case "OK":
+                # Cas où le joueur précédent a joué une carte joker
+                if game.current_card.split("_")[1] == "undefined":
+                    color = game.current_card.split("_")[0]
+                    color = COLORS[color] + " " + color
 
-            await game.bot.send(
-                f"PRIVMSG {game.channel} :\x02La nouvelle couleur est {color}. C'est à {game.current_player.pseudo} de jouer.\x02"
-            )
-        else:
-            current_card = (
-                COLORS[game.current_card.split("_")[0]] + " " + game.current_card
-            )
+                    await game.bot.send(
+                        f"PRIVMSG {game.channel} :\x02La nouvelle couleur est {color}. C'est à {game.current_player.pseudo} de jouer.\x02"
+                    )
+                else:
+                    current_card = (
+                        COLORS[game.current_card.split("_")[0]]
+                        + " "
+                        + game.current_card
+                    )
 
-            await game.bot.send(
-                f"PRIVMSG {game.channel} :\x02La nouvelle carte est {current_card}. C'est à {game.current_player.pseudo} de jouer.\x02"
-            )
+                    await game.bot.send(
+                        f"PRIVMSG {game.channel} :\x02La nouvelle carte est {current_card}. C'est à {game.current_player.pseudo} de jouer.\x02"
+                    )
 
-        await checkUno(
-            game, game.current_player
-        )  # Vérifier le joueur devait dire Uno, et s'il l'a fait, sinon le faire piocher
+                await checkUno(
+                    game, game.current_player
+                )  # Vérifier le joueur devait dire Uno, et s'il l'a fait, sinon le faire piocher
 
-        await showHand(
-            game, game.current_player
-        )  # Donner sa main au joueur dont c'est le tour
+                await showHand(
+                    game, game.current_player
+                )  # Donner sa main au joueur dont c'est le tour
+            case "WAITING_COLOR":
+                await game.bot.send(
+                    f"PRIVMSG {game.channel} :\x02{game.current_player.pseudo} utilise une carte Joker ! Quelle couleur choisis-tu ?"
+                )
     else:
         match message:
             case "NOT_STARTED":
@@ -63,7 +71,9 @@ async def play(game, pseudo, msg):
                     f"PRIVMSG {game.channel} :\x02Cette carte n'est pas dans ta main.\x02"
                 )
             case "INVALID":
-                await game.bot.send(f"PRIVMSG {game.channel} :\x02Ce coup est invalide.\x02")
+                await game.bot.send(
+                    f"PRIVMSG {game.channel} :\x02Ce coup est invalide.\x02"
+                )
             case "NO_COLOR":
                 await game.bot.send(
                     f"PRIVMSG {game.channel} :\x02Il faut donner une couleur lorsque l'on utilise une carte joker (!jouer <carte> <option> avec option rouge, vert, bleu ou jaune).\x02"

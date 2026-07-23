@@ -1,4 +1,6 @@
 # Objects
+import random
+
 from game.deck import Deck
 from game.player import Player
 
@@ -45,6 +47,7 @@ class Game:
         finish_order (str[]): Pseudo des gagnants, par ordre du plus rapide
         current_card (str): Carte sur laquelle le joueur actuel doit jouer
         direction (int): Sens du jeu, avec 1 pour le sens classique et -1 pour le sens inverse
+        waiting_for_color (bool): Flag d'attente d'une couleur après une carte Joker
         starting_timer (asyncio.Task | None): Timer avant lequel la partie va commencer
         turn_timer (asyncio.Task | None): Gestion du temps pour le tour d'un joueur, limité à 60sec
     """
@@ -62,8 +65,9 @@ class Game:
         self.finish_order = []
 
         self.current_card = None
-
         self.direction = 1
+
+        self.waiting_for_color = False
 
         self.starting_timer = None  # Timer pour lancer la partie
         self.turn_timer = None  # Timer pour un tour
@@ -88,7 +92,7 @@ class Game:
         if self.started:  # Partie déjà en cours
             return (False, "ALREADY_STARTED")
 
-        if pseudo in self.players:  # Joueur déjà enregistré
+        if any(player.pseudo == pseudo for player in self.players):  # Joueur déjà enregistré
             return (False, "ALREADY_IN")
 
         self.players.append(Player(pseudo))
@@ -210,6 +214,12 @@ class Game:
             )
 
             old_player = self.current_player
+
+            if self.waiting_for_color: # Choix d'une couleur en attente
+                colors = ["rouge_undefined", "vert_undefined", "bleu_undefined", "jaune_undefined"]
+                self.current_card = colors[random.randint(0, 3)]
+                self.waiting_for_color = False
+
             self.next_turn()
 
             # Cas où le joueur précédent a passé son tour après un joker
@@ -218,7 +228,7 @@ class Game:
                 color = COLORS[color] + " " + color
 
                 await self.bot.send(
-                    f"PRIVMSG {self.channel} :\x02{old_player.pseudo} n'as pas pu jouer à temps. C'est à {self.current_player.pseudo} de jouer. La couleur est {color}\x02"
+                    f"PRIVMSG {self.channel} :\x02{old_player.pseudo} n'a pas pu jouer à temps. C'est à {self.current_player.pseudo} de jouer. La couleur est {color}\x02"
                 )
             else:
                 current_card = (
@@ -226,7 +236,7 @@ class Game:
                 )
 
                 await self.bot.send(
-                    f"PRIVMSG {self.channel} :\x02{old_player.pseudo} n'as pas pu jouer à temps. C'est à {self.current_player.pseudo} de jouer. La carte est {current_card}\x02"
+                    f"PRIVMSG {self.channel} :\x02{old_player.pseudo} n'a pas pu jouer à temps. C'est à {self.current_player.pseudo} de jouer. La carte est {current_card}\x02"
                 )
 
             await checkUno(
@@ -333,11 +343,6 @@ class Game:
             return (check, "INVALID")  # Cette action n'est pas possible
 
         card_color, card_symbol = card.split("_")
-        if card_color == "joker" and (
-            len(parts) < 3 or parts[2] not in ["rouge", "vert", "bleu", "jaune"]
-        ):
-            return (False, "NO_COLOR")
-
         player.play_card(card)  # Retirer la carte de la main du joueur
 
         # Gestion des cartes spéciales
@@ -351,29 +356,33 @@ class Game:
             await self.bot.send(
                 f"PRIVMSG {self.channel} :\x02Désolé {player.pseudo}, mais tu ne joueras pas cette fois-ci.\x02"
             )
-        elif card_color == "joker":
+        elif card_color == "joker":        
             if card_symbol == "+4":  # Carte joker +4
-                self.next_turn()  # Joueur qui va piocher
+                # Joueur qui va piocher
+                old_index = self.players.index(self.current_player)
+                new_index = (old_index + self.direction) % len(self.players)
+                next_player = self.players[new_index]
 
                 cards = []
                 for _ in range(4):  # Piocher 4 cartes
                     new_card = self.deck.draw()
-                    self.current_player.add_card(new_card)
+                    next_player.add_card(new_card)
 
                     cards.append(COLORS[new_card.split("_")[0]] + " " + new_card)
 
                 drawed_string = ", ".join(cards)
 
                 await self.bot.send(
-                    f"PRIVMSG {self.channel} :\x02Ouille, ça fait mal ! {self.current_player.pseudo} pioche 4 cartes.\x02"
+                    f"PRIVMSG {self.channel} :\x02Ouille, ça fait mal ! {next_player.pseudo} pioche 4 cartes.\x02"
                 )
                 await self.bot.send(
-                    f"NOTICE {self.current_player.pseudo} :\x02Tu as pioché les cartes suivantes : {drawed_string}.\x02"
+                    f"NOTICE {next_player.pseudo} :\x02Tu as pioché les cartes suivantes : {drawed_string}.\x02"
                 )
 
-            card = (
-                parts[2] + "_undefined"
-            )  # Construction d'une fasse carte pour la couleur
+            self.restart_turn_timer()  # Démarrer un nouveau timer
+            self.waiting_for_color = True # Attendre que le joueur ai choisit une couleur
+
+            return (True, "WAITING_COLOR")
 
         elif card_symbol == "+2":
             # On passe le tour du joueur qui va piocher
@@ -411,7 +420,7 @@ class Game:
 
         self.current_card = card  # Mettre à jour la carte du haut du paquet
         self.next_turn()
-        return (check, "OK")
+        return (True, "OK")
 
     def draw_card(self, pseudo):
         """Gérer l'action piocher d'un joueur
@@ -454,7 +463,6 @@ class Game:
             return (True, "OK")
 
         # Le joueur ne peut pas jouer, on passe son tour
-        self.next_turn()
         return (True, "PASS")
 
     def uno(self, pseudo):
@@ -483,4 +491,20 @@ class Game:
             return (False, "NO_UNO")
 
         uno_player.uno = True
+        return (True, "OK")
+
+    def choose_color(self, pseudo, color):
+        if not self.started:
+            return (False, "NOT_STARTED")
+
+        if pseudo != self.current_player.pseudo:
+            return (False, "NOT_YOUR_TURN")
+
+        if not self.waiting_for_color:
+            return (False, "NOT_ASKED")
+
+        chosen_color = color.replace('!', '')
+        self.current_card = chosen_color + "_undefined" # Construction d'une fausse carte pour la couleur
+        self.waiting_for_color = False
+        self.next_turn()
         return (True, "OK")

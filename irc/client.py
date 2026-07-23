@@ -1,6 +1,7 @@
 import asyncio
 
 from commands import seeCommands
+from commands.chooseColor import chooseColor
 import config
 
 from irc.parser import parse_privmsg
@@ -95,7 +96,7 @@ class IRCClient:
         return line.decode(errors="ignore").strip()
 
     async def loop(self):
-        """Boucle d'actions du bot"""
+        """Boucle d'action du bot"""
 
         registered = False
         self.running = True
@@ -123,7 +124,7 @@ class IRCClient:
             # Gestion des commandes
             parsed = parse_privmsg(message)
             if parsed:
-                user, channel, msg = parsed
+                user, _, msg = parsed
 
                 match msg.lower():
                     case "!go":  # Rejoindre la partie
@@ -131,11 +132,13 @@ class IRCClient:
                     case "!quit":  # Quitter la partie
                         await quitGame(self.game, user)
                     case "!joueurs":  # Voir la liste des joueurs
-                        await seePlayers(self.game, self)
+                        await seePlayers(self.game)
                     case c if c.startswith("!jouer ") or c.startswith("!j "):  # Jouer une carte
                         await play(self.game, user, msg)
                     case c if c == "!pioche" or c == "!p":  # Piocher une carte
                         await draw(self.game, user)
+                    case c if c in ["!rouge", "!vert", "!bleu", "!jaune"]: # Choisir une couleur
+                        await chooseColor(self.game, user, msg)
                     case "!uno":  # Crier UNO
                         await uno(self.game, user)
                     case "!help": # Aide de jeu
